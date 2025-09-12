@@ -1,0 +1,34 @@
+{
+  "name": "wuxing-bazi-fortune",
+  "version": "1.0.0",
+  "description": "一个基于传统中华文化的算命应用，包含小六壬卜卦和五行八字分析功能。",
+  "main": "script.js",
+  "scripts": {
+    "start": "live-server --port=3000 --open=/index.html",
+    "dev": "live-server --port=3000 --open=/index.html --watch=.",
+    "build": "npm run minify",
+    "minify": "terser script.js -o script.min.js && csso styles.css --output styles.min.css",
+    "lint": "eslint script.js",
+    "format": "prettier --write *.html *.css *.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "算命",
+    "小六壬",
+    "五行八字",
+    "占卜",
+    "传统文化",
+    "fortune-telling",
+    "divination"
+  ],
+  "author": "qixia",
+  "license": "MIT",
+  "type": "module",
+  "devDependencies": {
+    "csso-cli": "^4.0.2",
+    "eslint": "^9.35.0",
+    "live-server": "^1.2.2",
+    "prettier": "^3.6.2",
+    "terser": "^5.44.0"
+  }
+}
