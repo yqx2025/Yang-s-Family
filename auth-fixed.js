@@ -249,10 +249,18 @@ class AuthApp {
             return;
         }
 
+        // 检查浏览器是否支持弹窗
+        if (!window.open) {
+            this.showError('您的浏览器不支持弹窗登录，请允许弹窗或使用其他登录方式');
+            return;
+        }
+
         this.setLoading(googleLoginBtn, true);
 
         try {
+            console.log('开始Google登录流程...');
             const result = await signInWithPopup(auth, googleProvider);
+            console.log('Google登录成功:', result.user);
             this.showSuccess('Google登录成功！正在跳转...');
             
             setTimeout(() => {
@@ -260,6 +268,7 @@ class AuthApp {
             }, 1500);
 
         } catch (error) {
+            console.error('Google登录失败:', error);
             this.handleAuthError(error);
         } finally {
             this.setLoading(googleLoginBtn, false);
@@ -384,6 +393,18 @@ class AuthApp {
                 break;
             case 'auth/cancelled-popup-request':
                 errorMessage = '登录被取消';
+                break;
+            case 'auth/popup-blocked':
+                errorMessage = '浏览器阻止了登录弹窗，请允许弹窗或使用其他登录方式';
+                break;
+            case 'auth/unauthorized-domain':
+                errorMessage = '当前域名未授权，请联系管理员';
+                break;
+            case 'auth/operation-not-allowed':
+                errorMessage = 'Google登录功能未启用，请联系管理员';
+                break;
+            case 'auth/account-exists-with-different-credential':
+                errorMessage = '该邮箱已使用其他方式注册，请使用邮箱密码登录';
                 break;
             default:
                 errorMessage = error.message || '登录失败，请重试';
