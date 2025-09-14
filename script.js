@@ -430,8 +430,12 @@ class FortuneApp {
         
         // 如果切换到个人档案页面，初始化个人档案管理
         if (tabName === 'profile' && window.profileManager) {
-            window.profileManager.loadUserInfo();
-            window.profileManager.showProfileSection('people');
+            // 延迟一小段时间确保DOM已经显示
+            setTimeout(() => {
+                window.profileManager.initializeEvents();
+                window.profileManager.loadUserInfo();
+                window.profileManager.showProfileSection('people');
+            }, 100);
         }
     }
 
@@ -639,21 +643,27 @@ class FortuneApp {
 class ProfileManager {
     constructor() {
         this.currentUser = null;
+        this.eventsInitialized = false;
         this.init();
     }
 
     init() {
-        this.bindEvents();
         if (auth.currentUser) {
             this.loadUserInfo();
         }
     }
 
-    bindEvents() {
+    // 延迟绑定事件，在切换到个人档案页面时调用
+    initializeEvents() {
+        if (this.eventsInitialized) return;
+        
         // 档案导航
         const profileNavBtns = document.querySelectorAll('.profile-nav-btn');
+        console.log('找到个人档案导航按钮数量:', profileNavBtns.length);
+        
         profileNavBtns.forEach(btn => {
             btn.addEventListener('click', () => {
+                console.log('点击了导航按钮:', btn.dataset.section);
                 const section = btn.dataset.section;
                 this.showProfileSection(section);
                 
@@ -665,8 +675,12 @@ class ProfileManager {
 
         // 添加算命对象
         const addPersonBtn = document.getElementById('addPersonBtn');
+        console.log('找到添加按钮:', !!addPersonBtn);
         if (addPersonBtn) {
-            addPersonBtn.addEventListener('click', () => this.showAddPersonModal());
+            addPersonBtn.addEventListener('click', () => {
+                console.log('点击了添加按钮');
+                this.showAddPersonModal();
+            });
         }
 
         // 弹窗控制
@@ -684,6 +698,9 @@ class ProfileManager {
         if (addPersonForm) {
             addPersonForm.addEventListener('submit', (e) => this.handleAddPerson(e));
         }
+
+        this.eventsInitialized = true;
+        console.log('个人档案事件已初始化');
     }
 
     loadUserInfo() {
