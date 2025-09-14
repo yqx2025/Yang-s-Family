@@ -430,12 +430,14 @@ class FortuneApp {
         
         // 如果切换到个人档案页面，初始化个人档案管理
         if (tabName === 'profile' && window.profileManager) {
-            // 延迟一小段时间确保DOM已经显示
+            console.log('切换到个人档案页面，准备初始化...');
+            // 延迟确保DOM完全渲染
             setTimeout(() => {
+                console.log('延迟执行个人档案初始化...');
                 window.profileManager.initializeEvents();
                 window.profileManager.loadUserInfo();
                 window.profileManager.showProfileSection('people');
-            }, 100);
+            }, 300);
         }
     }
 
@@ -655,7 +657,12 @@ class ProfileManager {
 
     // 延迟绑定事件，在切换到个人档案页面时调用
     initializeEvents() {
-        if (this.eventsInitialized) return;
+        if (this.eventsInitialized) {
+            console.log('事件已经初始化过了，跳过');
+            return;
+        }
+        
+        console.log('开始初始化个人档案事件...');
         
         // 档案导航
         const profileNavBtns = document.querySelectorAll('.profile-nav-btn');
@@ -675,17 +682,45 @@ class ProfileManager {
 
         // 添加算命对象
         const addPersonBtn = document.getElementById('addPersonBtn');
-        console.log('找到添加按钮:', !!addPersonBtn);
+        console.log('查找addPersonBtn元素...');
+        console.log('addPersonBtn存在:', !!addPersonBtn);
+        console.log('addPersonBtn详情:', addPersonBtn);
+        
         if (addPersonBtn) {
-            addPersonBtn.addEventListener('click', () => {
-                console.log('点击了添加按钮');
+            console.log('为添加按钮绑定事件');
+            addPersonBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('添加按钮被点击了！');
                 this.showAddPersonModal();
             });
+            
+            // 测试按钮是否可见
+            const rect = addPersonBtn.getBoundingClientRect();
+            console.log('按钮位置和大小:', rect);
+            console.log('按钮样式:', window.getComputedStyle(addPersonBtn).display);
+        } else {
+            console.error('未找到addPersonBtn元素！');
+            // 再次尝试查找
+            setTimeout(() => {
+                const retryBtn = document.getElementById('addPersonBtn');
+                console.log('重试查找按钮:', !!retryBtn);
+                if (retryBtn) {
+                    retryBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        console.log('重试绑定的按钮被点击了！');
+                        this.showAddPersonModal();
+                    });
+                }
+            }, 500);
         }
 
         // 弹窗控制
         const closeModal = document.getElementById('closeModal');
         const cancelAddPerson = document.getElementById('cancelAddPerson');
+        console.log('找到关闭按钮:', !!closeModal);
+        console.log('找到取消按钮:', !!cancelAddPerson);
+        
         if (closeModal) {
             closeModal.addEventListener('click', () => this.hideAddPersonModal());
         }
@@ -695,12 +730,13 @@ class ProfileManager {
 
         // 添加人员表单
         const addPersonForm = document.getElementById('addPersonForm');
+        console.log('找到表单:', !!addPersonForm);
         if (addPersonForm) {
             addPersonForm.addEventListener('submit', (e) => this.handleAddPerson(e));
         }
 
         this.eventsInitialized = true;
-        console.log('个人档案事件已初始化');
+        console.log('个人档案事件初始化完成！');
     }
 
     loadUserInfo() {
@@ -956,6 +992,22 @@ class AuthManager {
     }
 }
 
+// 调试函数
+window.debugAddButton = function() {
+    console.log('=== 调试添加按钮 ===');
+    const btn = document.getElementById('addPersonBtn');
+    console.log('按钮元素:', btn);
+    if (btn) {
+        console.log('按钮可见:', btn.offsetParent !== null);
+        console.log('按钮位置:', btn.getBoundingClientRect());
+        console.log('父容器:', btn.parentElement);
+        console.log('点击测试...');
+        btn.click();
+    } else {
+        console.log('按钮不存在');
+    }
+};
+
 // 初始化应用
 document.addEventListener('DOMContentLoaded', () => {
     // 等待Firebase加载并初始化
@@ -964,6 +1016,9 @@ document.addEventListener('DOMContentLoaded', () => {
             new AuthManager();
             new FortuneApp();
             window.profileManager = new ProfileManager();
+            
+            // 在控制台中添加调试提示
+            console.log('应用已初始化，可使用 debugAddButton() 来调试添加按钮');
         } else {
             // 如果Firebase未加载，等待一下再试
             setTimeout(checkFirebase, 100);
