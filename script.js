@@ -1,6 +1,33 @@
-// 导入Firebase配置和认证服务
-import app from './firebase-config.js';
-import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
+// Firebase配置
+const firebaseConfig = {
+    apiKey: "AIzaSyAj7oel9oxDn_ehVoHQK6VspLk6QOgrGhM",
+    authDomain: "real-207a1.firebaseapp.com",
+    projectId: "real-207a1",
+    storageBucket: "real-207a1.firebasestorage.app",
+    messagingSenderId: "515418801001",
+    appId: "1:515418801001:web:ef0ff22d8e1e584b6b73f8"
+};
+
+// 初始化Firebase
+let app, auth;
+let firebaseReady = false;
+
+// 等待Firebase SDK加载并初始化
+function initFirebase() {
+    try {
+        if (window.firebase && window.firebase.auth) {
+            app = firebase.initializeApp(firebaseConfig);
+            auth = firebase.auth();
+            firebaseReady = true;
+            console.log('Firebase初始化成功');
+            return true;
+        }
+        return false;
+    } catch (error) {
+        console.error('Firebase初始化失败:', error);
+        return false;
+    }
+}
 
 // 小六壬卜卦系统
 class XiaoLiuRen {
@@ -550,17 +577,22 @@ class FortuneApp {
 // 认证管理
 class AuthManager {
     constructor() {
-        this.auth = getAuth(app);
+        this.auth = auth;
         this.init();
     }
 
     init() {
-        this.checkAuthState();
-        this.addLogoutButton();
+        if (firebaseReady) {
+            this.checkAuthState();
+            this.addLogoutButton();
+        } else {
+            // 如果Firebase未就绪，跳转到认证页面
+            window.location.href = 'auth.html';
+        }
     }
 
     checkAuthState() {
-        onAuthStateChanged(this.auth, (user) => {
+        this.auth.onAuthStateChanged((user) => {
             if (!user) {
                 // 用户未登录，跳转到认证页面
                 window.location.href = 'auth.html';
@@ -597,7 +629,7 @@ class AuthManager {
 
     async handleLogout() {
         try {
-            await signOut(this.auth);
+            await this.auth.signOut();
             window.location.href = 'auth.html';
         } catch (error) {
             console.error('登出失败:', error);
@@ -607,6 +639,16 @@ class AuthManager {
 
 // 初始化应用
 document.addEventListener('DOMContentLoaded', () => {
-    new AuthManager();
-    new FortuneApp();
+    // 等待Firebase加载并初始化
+    const checkFirebase = () => {
+        if (initFirebase()) {
+            new AuthManager();
+            new FortuneApp();
+        } else {
+            // 如果Firebase未加载，等待一下再试
+            setTimeout(checkFirebase, 100);
+        }
+    };
+    
+    checkFirebase();
 });
