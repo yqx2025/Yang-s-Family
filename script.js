@@ -653,90 +653,71 @@ class ProfileManager {
         if (auth.currentUser) {
             this.loadUserInfo();
         }
+        // 立即尝试绑定全局事件委托
+        this.bindGlobalEvents();
     }
 
-    // 延迟绑定事件，在切换到个人档案页面时调用
-    initializeEvents() {
-        if (this.eventsInitialized) {
-            console.log('事件已经初始化过了，跳过');
-            return;
-        }
-        
-        console.log('开始初始化个人档案事件...');
-        
-        // 档案导航
-        const profileNavBtns = document.querySelectorAll('.profile-nav-btn');
-        console.log('找到个人档案导航按钮数量:', profileNavBtns.length);
-        
-        profileNavBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                console.log('点击了导航按钮:', btn.dataset.section);
-                const section = btn.dataset.section;
+    // 使用事件委托来处理点击事件
+    bindGlobalEvents() {
+        document.addEventListener('click', (e) => {
+            // 处理添加新对象按钮
+            if (e.target.id === 'addPersonBtn' || e.target.closest('#addPersonBtn')) {
+                console.log('通过事件委托捕获到添加按钮点击');
+                e.preventDefault();
+                e.stopPropagation();
+                this.showAddPersonModal();
+                return;
+            }
+
+            // 处理个人档案导航按钮
+            if (e.target.classList.contains('profile-nav-btn')) {
+                console.log('通过事件委托捕获到导航按钮点击:', e.target.dataset.section);
+                const section = e.target.dataset.section;
                 this.showProfileSection(section);
                 
                 // 更新导航状态
-                profileNavBtns.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-            });
+                document.querySelectorAll('.profile-nav-btn').forEach(btn => btn.classList.remove('active'));
+                e.target.classList.add('active');
+                return;
+            }
+
+            // 处理弹窗关闭按钮
+            if (e.target.id === 'closeModal' || e.target.closest('#closeModal')) {
+                console.log('通过事件委托捕获到关闭弹窗点击');
+                e.preventDefault();
+                this.hideAddPersonModal();
+                return;
+            }
+
+            // 处理取消按钮
+            if (e.target.id === 'cancelAddPerson' || e.target.closest('#cancelAddPerson')) {
+                console.log('通过事件委托捕获到取消按钮点击');
+                e.preventDefault();
+                this.hideAddPersonModal();
+                return;
+            }
         });
 
-        // 添加算命对象
-        const addPersonBtn = document.getElementById('addPersonBtn');
-        console.log('查找addPersonBtn元素...');
-        console.log('addPersonBtn存在:', !!addPersonBtn);
-        console.log('addPersonBtn详情:', addPersonBtn);
-        
-        if (addPersonBtn) {
-            console.log('为添加按钮绑定事件');
-            addPersonBtn.addEventListener('click', (e) => {
+        // 处理表单提交
+        document.addEventListener('submit', (e) => {
+            if (e.target.id === 'addPersonForm') {
+                console.log('通过事件委托捕获到表单提交');
                 e.preventDefault();
-                e.stopPropagation();
-                console.log('添加按钮被点击了！');
-                this.showAddPersonModal();
-            });
-            
-            // 测试按钮是否可见
-            const rect = addPersonBtn.getBoundingClientRect();
-            console.log('按钮位置和大小:', rect);
-            console.log('按钮样式:', window.getComputedStyle(addPersonBtn).display);
-        } else {
-            console.error('未找到addPersonBtn元素！');
-            // 再次尝试查找
-            setTimeout(() => {
-                const retryBtn = document.getElementById('addPersonBtn');
-                console.log('重试查找按钮:', !!retryBtn);
-                if (retryBtn) {
-                    retryBtn.addEventListener('click', (e) => {
-                        e.preventDefault();
-                        console.log('重试绑定的按钮被点击了！');
-                        this.showAddPersonModal();
-                    });
-                }
-            }, 500);
-        }
+                this.handleAddPerson(e);
+            }
+        });
 
-        // 弹窗控制
-        const closeModal = document.getElementById('closeModal');
-        const cancelAddPerson = document.getElementById('cancelAddPerson');
-        console.log('找到关闭按钮:', !!closeModal);
-        console.log('找到取消按钮:', !!cancelAddPerson);
-        
-        if (closeModal) {
-            closeModal.addEventListener('click', () => this.hideAddPersonModal());
-        }
-        if (cancelAddPerson) {
-            cancelAddPerson.addEventListener('click', () => this.hideAddPersonModal());
-        }
+        console.log('全局事件委托已设置');
+    }
 
-        // 添加人员表单
-        const addPersonForm = document.getElementById('addPersonForm');
-        console.log('找到表单:', !!addPersonForm);
-        if (addPersonForm) {
-            addPersonForm.addEventListener('submit', (e) => this.handleAddPerson(e));
+    // 延迟绑定事件，在切换到个人档案页面时调用（现在主要用于数据加载）
+    initializeEvents() {
+        console.log('initializeEvents被调用（现在使用事件委托，无需重复绑定）');
+        // 事件委托已经在构造函数中设置，这里只需要确保数据加载
+        if (!this.eventsInitialized) {
+            console.log('标记事件已初始化');
+            this.eventsInitialized = true;
         }
-
-        this.eventsInitialized = true;
-        console.log('个人档案事件初始化完成！');
     }
 
     loadUserInfo() {
@@ -1008,6 +989,35 @@ window.debugAddButton = function() {
     }
 };
 
+// 强制显示弹窗的调试函数
+window.forceShowModal = function() {
+    console.log('=== 强制显示弹窗 ===');
+    if (window.profileManager) {
+        window.profileManager.showAddPersonModal();
+        console.log('弹窗应该已显示');
+    } else {
+        console.log('ProfileManager不存在');
+    }
+};
+
+// 测试事件委托的函数
+window.testEventDelegation = function() {
+    console.log('=== 测试事件委托 ===');
+    const btn = document.getElementById('addPersonBtn');
+    if (btn) {
+        // 创建并派发点击事件
+        const event = new MouseEvent('click', {
+            bubbles: true,
+            cancelable: true,
+            view: window
+        });
+        btn.dispatchEvent(event);
+        console.log('已派发点击事件');
+    } else {
+        console.log('按钮不存在');
+    }
+};
+
 // 初始化应用
 document.addEventListener('DOMContentLoaded', () => {
     // 等待Firebase加载并初始化
@@ -1018,7 +1028,11 @@ document.addEventListener('DOMContentLoaded', () => {
             window.profileManager = new ProfileManager();
             
             // 在控制台中添加调试提示
-            console.log('应用已初始化，可使用 debugAddButton() 来调试添加按钮');
+            console.log('应用已初始化！');
+            console.log('可用的调试命令:');
+            console.log('- debugAddButton() - 调试添加按钮');
+            console.log('- forceShowModal() - 强制显示弹窗');
+            console.log('- testEventDelegation() - 测试事件委托');
         } else {
             // 如果Firebase未加载，等待一下再试
             setTimeout(checkFirebase, 100);
