@@ -24,7 +24,6 @@
             <div class="auth-tabs">
                 <button class="tab-btn active" data-mode="login">登录</button>
                 <button class="tab-btn" data-mode="register">注册</button>
-                <button class="tab-btn" data-mode="phone">电话登录</button>
             </div>
 
             <!-- 登录表单 -->
@@ -113,32 +112,6 @@
                 </button>
             </form>
 
-            <!-- 电话登录表单 -->
-            <form id="phoneForm" class="auth-form">
-                <div class="form-group">
-                    <label for="phoneNumber">手机号码</label>
-                    <div class="input-wrapper">
-                        <span class="material-icons input-icon">phone</span>
-                        <input type="tel" id="phoneNumber" placeholder="请输入手机号码" required>
-                    </div>
-                </div>
-
-                <div class="form-group" id="verificationCodeGroup" style="display: none;">
-                    <label for="verificationCode">验证码</label>
-                    <div class="input-wrapper">
-                        <span class="material-icons input-icon">security</span>
-                        <input type="text" id="verificationCode" placeholder="请输入6位验证码" maxlength="6">
-                        <button type="button" class="send-code-btn" id="sendCodeBtn">发送验证码</button>
-                    </div>
-                </div>
-
-                <button type="submit" class="auth-btn primary" id="phoneLoginBtn">
-                    <span class="btn-text">登录</span>
-                    <div class="loading-spinner hidden">
-                        <div class="spinner"></div>
-                    </div>
-                </button>
-            </form>
 
             <!-- 分割线 -->
             <div class="divider">
@@ -180,6 +153,11 @@
         </div>
     </div>
 
-    <script type="module" src="auth-fixed.js"></script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
+    
+    <!-- 认证脚本 -->
+    <script src="auth-simple.js"></script>
 </body>
 </html>
