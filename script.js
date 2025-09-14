@@ -1,3 +1,7 @@
+// 导入Firebase配置和认证服务
+import app from './firebase-config.js';
+import { getAuth, onAuthStateChanged, signOut } from 'firebase/auth';
+
 // 小六壬卜卦系统
 class XiaoLiuRen {
     constructor() {
@@ -543,7 +547,66 @@ class FortuneApp {
     }
 }
 
+// 认证管理
+class AuthManager {
+    constructor() {
+        this.auth = getAuth(app);
+        this.init();
+    }
+
+    init() {
+        this.checkAuthState();
+        this.addLogoutButton();
+    }
+
+    checkAuthState() {
+        onAuthStateChanged(this.auth, (user) => {
+            if (!user) {
+                // 用户未登录，跳转到认证页面
+                window.location.href = 'auth.html';
+            }
+        });
+    }
+
+    addLogoutButton() {
+        // 在header中添加登出按钮
+        const header = document.querySelector('.header');
+        if (header) {
+            const logoutBtn = document.createElement('button');
+            logoutBtn.innerHTML = '<span class="material-icons">logout</span> 登出';
+            logoutBtn.className = 'logout-btn';
+            logoutBtn.style.cssText = `
+                background: rgba(255, 255, 255, 0.1);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                color: white;
+                padding: 8px 16px;
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 14px;
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                transition: all 0.3s ease;
+                margin-left: auto;
+            `;
+            
+            logoutBtn.addEventListener('click', () => this.handleLogout());
+            header.appendChild(logoutBtn);
+        }
+    }
+
+    async handleLogout() {
+        try {
+            await signOut(this.auth);
+            window.location.href = 'auth.html';
+        } catch (error) {
+            console.error('登出失败:', error);
+        }
+    }
+}
+
 // 初始化应用
 document.addEventListener('DOMContentLoaded', () => {
+    new AuthManager();
     new FortuneApp();
 });
