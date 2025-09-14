@@ -1,27 +1,61 @@
-// 导入Firebase配置和认证服务
-import app from './firebase-config.js';
-import { 
-    getAuth, 
-    createUserWithEmailAndPassword, 
-    signInWithEmailAndPassword,
-    signInWithPopup,
-    GoogleAuthProvider,
-    sendPasswordResetEmail,
-    onAuthStateChanged,
-    signInWithPhoneNumber,
-    RecaptchaVerifier,
-    PhoneAuthProvider,
-    signInWithCredential
-} from 'firebase/auth';
+// 动态导入Firebase模块（兼容Netlify部署）
+let app, auth, googleProvider;
+let getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword;
+let signInWithPopup, GoogleAuthProvider, sendPasswordResetEmail, onAuthStateChanged;
+let signInWithPhoneNumber, RecaptchaVerifier, PhoneAuthProvider, signInWithCredential;
+
+let firebaseReady = false;
 
 console.log('认证脚本开始加载');
 
-// 初始化Firebase认证服务
-const auth = getAuth(app);
-const googleProvider = new GoogleAuthProvider();
-let firebaseReady = true;
-
-console.log('Firebase认证服务初始化完成');
+// 初始化Firebase
+async function initFirebase() {
+    try {
+        console.log('开始加载Firebase模块...');
+        
+        // 从CDN导入Firebase
+        const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js');
+        const authModule = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
+        
+        // Firebase配置
+        const firebaseConfig = {
+            apiKey: "AIzaSyAj7oel9oxDn_ehVoHQK6VspLk6QOgrGhM",
+            authDomain: "real-207a1.firebaseapp.com",
+            projectId: "real-207a1",
+            storageBucket: "real-207a1.firebasestorage.app",
+            messagingSenderId: "515418801001",
+            appId: "1:515418801001:web:ef0ff22d8e1e584b6b73f8"
+        };
+        
+        // 初始化Firebase应用
+        app = initializeApp(firebaseConfig);
+        
+        // 获取认证函数
+        getAuth = authModule.getAuth;
+        createUserWithEmailAndPassword = authModule.createUserWithEmailAndPassword;
+        signInWithEmailAndPassword = authModule.signInWithEmailAndPassword;
+        signInWithPopup = authModule.signInWithPopup;
+        GoogleAuthProvider = authModule.GoogleAuthProvider;
+        sendPasswordResetEmail = authModule.sendPasswordResetEmail;
+        onAuthStateChanged = authModule.onAuthStateChanged;
+        signInWithPhoneNumber = authModule.signInWithPhoneNumber;
+        RecaptchaVerifier = authModule.RecaptchaVerifier;
+        PhoneAuthProvider = authModule.PhoneAuthProvider;
+        signInWithCredential = authModule.signInWithCredential;
+        
+        // 初始化认证服务
+        auth = getAuth(app);
+        googleProvider = new GoogleAuthProvider();
+        firebaseReady = true;
+        
+        console.log('Firebase认证服务初始化完成');
+        return true;
+    } catch (error) {
+        console.error('Firebase模块加载失败:', error);
+        firebaseReady = false;
+        return false;
+    }
+}
 
 // DOM元素变量
 let loginForm, registerForm, phoneForm, googleLoginBtn, tabBtns, errorMessage, successMessage;
@@ -36,12 +70,15 @@ class AuthApp {
         this.init();
     }
 
-    init() {
+    async init() {
         console.log('初始化认证应用');
         this.initDOMElements();
         this.setupEventListeners();
         
-        if (firebaseReady) {
+        // 异步初始化Firebase
+        const firebaseInitialized = await initFirebase();
+        
+        if (firebaseInitialized) {
             this.checkAuthState();
         } else {
             this.showFirebaseError();
@@ -249,18 +286,10 @@ class AuthApp {
             return;
         }
 
-        // 检查浏览器是否支持弹窗
-        if (!window.open) {
-            this.showError('您的浏览器不支持弹窗登录，请允许弹窗或使用其他登录方式');
-            return;
-        }
-
         this.setLoading(googleLoginBtn, true);
 
         try {
-            console.log('开始Google登录流程...');
             const result = await signInWithPopup(auth, googleProvider);
-            console.log('Google登录成功:', result.user);
             this.showSuccess('Google登录成功！正在跳转...');
             
             setTimeout(() => {
@@ -268,7 +297,6 @@ class AuthApp {
             }, 1500);
 
         } catch (error) {
-            console.error('Google登录失败:', error);
             this.handleAuthError(error);
         } finally {
             this.setLoading(googleLoginBtn, false);
@@ -393,18 +421,6 @@ class AuthApp {
                 break;
             case 'auth/cancelled-popup-request':
                 errorMessage = '登录被取消';
-                break;
-            case 'auth/popup-blocked':
-                errorMessage = '浏览器阻止了登录弹窗，请允许弹窗或使用其他登录方式';
-                break;
-            case 'auth/unauthorized-domain':
-                errorMessage = '当前域名未授权，请联系管理员';
-                break;
-            case 'auth/operation-not-allowed':
-                errorMessage = 'Google登录功能未启用，请联系管理员';
-                break;
-            case 'auth/account-exists-with-different-credential':
-                errorMessage = '该邮箱已使用其他方式注册，请使用邮箱密码登录';
                 break;
             default:
                 errorMessage = error.message || '登录失败，请重试';
