@@ -1,5 +1,27 @@
-// 简化的认证脚本，先确保基本功能正常
+// 导入Firebase配置和认证服务
+import app from './firebase-config.js';
+import { 
+    getAuth, 
+    createUserWithEmailAndPassword, 
+    signInWithEmailAndPassword,
+    signInWithPopup,
+    GoogleAuthProvider,
+    sendPasswordResetEmail,
+    onAuthStateChanged,
+    signInWithPhoneNumber,
+    RecaptchaVerifier,
+    PhoneAuthProvider,
+    signInWithCredential
+} from 'firebase/auth';
+
 console.log('认证脚本开始加载');
+
+// 初始化Firebase认证服务
+const auth = getAuth(app);
+const googleProvider = new GoogleAuthProvider();
+let firebaseReady = true;
+
+console.log('Firebase认证服务初始化完成');
 
 // DOM元素变量
 let loginForm, registerForm, phoneForm, googleLoginBtn, tabBtns, errorMessage, successMessage;
@@ -8,49 +30,16 @@ let phoneNumber, verificationCode, sendCodeBtn, verificationCodeGroup;
 let loginBtn, registerBtn, phoneLoginBtn;
 let togglePasswordBtns;
 
-// Firebase相关变量
-let app, auth, googleProvider;
-let firebaseReady = false;
-
-// 初始化Firebase（异步）
-async function initFirebase() {
-    try {
-        console.log('开始加载Firebase模块...');
-        app = (await import('./firebase-config.js')).default;
-        const authModule = await import('firebase/auth');
-        
-        const { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, 
-                signInWithPopup, GoogleAuthProvider, sendPasswordResetEmail, 
-                onAuthStateChanged, signInWithPhoneNumber, RecaptchaVerifier, 
-                PhoneAuthProvider, signInWithCredential } = authModule;
-        
-        // 初始化认证服务
-        auth = getAuth(app);
-        googleProvider = new GoogleAuthProvider();
-        
-        console.log('Firebase模块加载成功');
-        firebaseReady = true;
-        return true;
-    } catch (error) {
-        console.error('Firebase模块加载失败:', error);
-        firebaseReady = false;
-        return false;
-    }
-}
-
 // 认证应用类
 class AuthApp {
     constructor() {
         this.init();
     }
 
-    async init() {
+    init() {
         console.log('初始化认证应用');
         this.initDOMElements();
         this.setupEventListeners();
-        
-        // 异步初始化Firebase
-        await initFirebase();
         
         if (firebaseReady) {
             this.checkAuthState();
@@ -204,7 +193,6 @@ class AuthApp {
         this.setLoading(loginBtn, true);
 
         try {
-            const { signInWithEmailAndPassword } = await import('firebase/auth');
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
             this.showSuccess('登录成功！正在跳转...');
             
@@ -239,7 +227,6 @@ class AuthApp {
         this.setLoading(registerBtn, true);
 
         try {
-            const { createUserWithEmailAndPassword } = await import('firebase/auth');
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             this.showSuccess('注册成功！正在跳转...');
             
@@ -265,7 +252,6 @@ class AuthApp {
         this.setLoading(googleLoginBtn, true);
 
         try {
-            const { signInWithPopup, GoogleAuthProvider } = await import('firebase/auth');
             const result = await signInWithPopup(auth, googleProvider);
             this.showSuccess('Google登录成功！正在跳转...');
             
@@ -463,7 +449,6 @@ class AuthApp {
     checkAuthState() {
         if (!firebaseReady || !auth) return;
         
-        const { onAuthStateChanged } = require('firebase/auth');
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 const currentPage = window.location.pathname;
