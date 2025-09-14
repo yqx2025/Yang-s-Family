@@ -9,15 +9,16 @@ const firebaseConfig = {
 };
 
 // 初始化Firebase
-let app, auth;
+let app, auth, db;
 let firebaseReady = false;
 
 // 等待Firebase SDK加载并初始化
 function initFirebase() {
     try {
-        if (window.firebase && window.firebase.auth) {
+        if (window.firebase && window.firebase.auth && window.firebase.firestore) {
             app = firebase.initializeApp(firebaseConfig);
             auth = firebase.auth();
+            db = firebase.firestore();
             firebaseReady = true;
             console.log('Firebase初始化成功');
             return true;
@@ -426,6 +427,12 @@ class FortuneApp {
         
         // 设置对应导航按钮为活动状态
         document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+        
+        // 如果切换到个人档案页面，初始化个人档案管理
+        if (tabName === 'profile' && window.profileManager) {
+            window.profileManager.loadUserInfo();
+            window.profileManager.showProfileSection('people');
+        }
     }
 
     startDivination() {
@@ -470,6 +477,30 @@ class FortuneApp {
         
         // 滚动到结果位置
         resultDiv.scrollIntoView({ behavior: 'smooth' });
+        
+        // 保存算命结果到Firestore
+        this.saveFortuneResult('xiaoliuren', result);
+    }
+
+    async saveFortuneResult(type, result) {
+        if (!firebaseReady || !auth.currentUser) return;
+        
+        try {
+            const user = auth.currentUser;
+            const fortuneData = {
+                userId: user.uid,
+                type: type,
+                question: document.getElementById('question').value || '',
+                result: result,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                createdAt: new Date().toISOString()
+            };
+            
+            await db.collection('fortune_results').add(fortuneData);
+            console.log('算命结果已保存');
+        } catch (error) {
+            console.error('保存算命结果失败:', error);
+        }
     }
 
     resetDivination() {
@@ -532,6 +563,36 @@ class FortuneApp {
         
         // 滚动到结果位置
         document.getElementById('baziResult').scrollIntoView({ behavior: 'smooth' });
+        
+        // 保存八字结果到Firestore
+        this.saveBaziResult(baZi, wuXingAnalysis);
+    }
+
+    async saveBaziResult(baZi, wuXingAnalysis) {
+        if (!firebaseReady || !auth.currentUser) return;
+        
+        try {
+            const user = auth.currentUser;
+            const baziData = {
+                userId: user.uid,
+                type: 'bazi',
+                birthInfo: {
+                    year: parseInt(document.getElementById('birthYear').value),
+                    month: parseInt(document.getElementById('birthMonth').value),
+                    day: parseInt(document.getElementById('birthDay').value),
+                    hour: parseInt(document.getElementById('birthHour').value)
+                },
+                baZi: baZi,
+                wuXingAnalysis: wuXingAnalysis,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                createdAt: new Date().toISOString()
+            };
+            
+            await db.collection('fortune_results').add(baziData);
+            console.log('八字结果已保存');
+        } catch (error) {
+            console.error('保存八字结果失败:', error);
+        }
     }
 
     showWuXingChart(wuXingCount) {
@@ -571,6 +632,247 @@ class FortuneApp {
         
         chartHTML += '</div>';
         chartDiv.innerHTML = chartHTML;
+    }
+}
+
+// 个人档案管理
+class ProfileManager {
+    constructor() {
+        this.currentUser = null;
+        this.init();
+    }
+
+    init() {
+        this.bindEvents();
+        if (auth.currentUser) {
+            this.loadUserInfo();
+        }
+    }
+
+    bindEvents() {
+        // 档案导航
+        const profileNavBtns = document.querySelectorAll('.profile-nav-btn');
+        profileNavBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const section = btn.dataset.section;
+                this.showProfileSection(section);
+                
+                // 更新导航状态
+                profileNavBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
+        });
+
+        // 添加算命对象
+        const addPersonBtn = document.getElementById('addPersonBtn');
+        if (addPersonBtn) {
+            addPersonBtn.addEventListener('click', () => this.showAddPersonModal());
+        }
+
+        // 弹窗控制
+        const closeModal = document.getElementById('closeModal');
+        const cancelAddPerson = document.getElementById('cancelAddPerson');
+        if (closeModal) {
+            closeModal.addEventListener('click', () => this.hideAddPersonModal());
+        }
+        if (cancelAddPerson) {
+            cancelAddPerson.addEventListener('click', () => this.hideAddPersonModal());
+        }
+
+        // 添加人员表单
+        const addPersonForm = document.getElementById('addPersonForm');
+        if (addPersonForm) {
+            addPersonForm.addEventListener('submit', (e) => this.handleAddPerson(e));
+        }
+    }
+
+    loadUserInfo() {
+        const user = auth.currentUser;
+        if (user) {
+            document.getElementById('userDisplayName').textContent = 
+                user.displayName || user.email.split('@')[0];
+            document.getElementById('userEmail').textContent = user.email;
+        }
+    }
+
+    showProfileSection(section) {
+        // 隐藏所有内容区域
+        const sections = document.querySelectorAll('.profile-content-section');
+        sections.forEach(s => s.classList.remove('active'));
+
+        // 显示选中的区域
+        const targetSection = document.getElementById(`${section}-section`);
+        if (targetSection) {
+            targetSection.classList.add('active');
+        }
+
+        // 根据选中的区域加载数据
+        if (section === 'people') {
+            this.loadPeopleList();
+        } else if (section === 'history') {
+            this.loadHistoryList();
+        }
+    }
+
+    async loadPeopleList() {
+        if (!auth.currentUser) return;
+
+        try {
+            const snapshot = await db.collection('fortune_people')
+                .where('userId', '==', auth.currentUser.uid)
+                .orderBy('createdAt', 'desc')
+                .get();
+
+            const peopleList = document.getElementById('peopleList');
+            if (snapshot.empty) {
+                peopleList.innerHTML = `
+                    <div class="empty-state">
+                        <span class="material-icons">person_add</span>
+                        <h4>还没有添加算命对象</h4>
+                        <p>点击上方按钮添加新的算命对象</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            snapshot.forEach(doc => {
+                const person = doc.data();
+                html += `
+                    <div class="person-card" data-id="${doc.id}">
+                        <h4>${person.name}</h4>
+                        <div class="person-info">
+                            出生：${person.birthYear}年${person.birthMonth}月${person.birthDay}日
+                            ${this.getShiChenName(person.birthHour)}
+                        </div>
+                        <div class="person-actions">
+                            <button class="btn-small btn-edit" onclick="profileManager.editPerson('${doc.id}')">
+                                编辑
+                            </button>
+                            <button class="btn-small btn-delete" onclick="profileManager.deletePerson('${doc.id}')">
+                                删除
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            peopleList.innerHTML = html;
+        } catch (error) {
+            console.error('加载人员列表失败:', error);
+        }
+    }
+
+    async loadHistoryList() {
+        if (!auth.currentUser) return;
+
+        try {
+            const snapshot = await db.collection('fortune_results')
+                .where('userId', '==', auth.currentUser.uid)
+                .orderBy('createdAt', 'desc')
+                .limit(50)
+                .get();
+
+            const historyList = document.getElementById('historyList');
+            if (snapshot.empty) {
+                historyList.innerHTML = `
+                    <div class="empty-state">
+                        <span class="material-icons">history</span>
+                        <h4>还没有算命记录</h4>
+                        <p>开始使用算命功能后，历史记录会显示在这里</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            snapshot.forEach(doc => {
+                const record = doc.data();
+                const date = new Date(record.createdAt).toLocaleString('zh-CN');
+                
+                let title = '';
+                let content = '';
+                
+                if (record.type === 'xiaoliuren') {
+                    title = '小六壬卜卦';
+                    content = `问题：${record.question}<br>结果：${record.result.result}`;
+                } else if (record.type === 'bazi') {
+                    title = '五行八字';
+                    content = `出生：${record.birthInfo.year}年${record.birthInfo.month}月${record.birthInfo.day}日`;
+                }
+
+                html += `
+                    <div class="history-item">
+                        <div class="history-header">
+                            <h5 class="history-title">${title}</h5>
+                            <span class="history-date">${date}</span>
+                        </div>
+                        <div class="history-type">${record.type === 'xiaoliuren' ? '小六壬' : '八字'}</div>
+                        <div class="history-content">${content}</div>
+                    </div>
+                `;
+            });
+
+            historyList.innerHTML = html;
+        } catch (error) {
+            console.error('加载历史记录失败:', error);
+        }
+    }
+
+    showAddPersonModal() {
+        document.getElementById('addPersonModal').classList.remove('hidden');
+    }
+
+    hideAddPersonModal() {
+        document.getElementById('addPersonModal').classList.add('hidden');
+        document.getElementById('addPersonForm').reset();
+    }
+
+    async handleAddPerson(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(e.target);
+        const personData = {
+            userId: auth.currentUser.uid,
+            name: document.getElementById('personName').value,
+            birthYear: parseInt(document.getElementById('personBirthYear').value),
+            birthMonth: parseInt(document.getElementById('personBirthMonth').value),
+            birthDay: parseInt(document.getElementById('personBirthDay').value),
+            birthHour: parseInt(document.getElementById('personBirthHour').value),
+            createdAt: new Date().toISOString()
+        };
+
+        try {
+            await db.collection('fortune_people').add(personData);
+            this.hideAddPersonModal();
+            this.loadPeopleList();
+            console.log('算命对象已添加');
+        } catch (error) {
+            console.error('添加算命对象失败:', error);
+            alert('添加失败，请重试');
+        }
+    }
+
+    async deletePerson(personId) {
+        if (!confirm('确定要删除这个算命对象吗？')) return;
+
+        try {
+            await db.collection('fortune_people').doc(personId).delete();
+            this.loadPeopleList();
+            console.log('算命对象已删除');
+        } catch (error) {
+            console.error('删除算命对象失败:', error);
+            alert('删除失败，请重试');
+        }
+    }
+
+    getShiChenName(hour) {
+        const shiChenMap = {
+            23: '子时', 1: '丑时', 3: '寅时', 5: '卯时',
+            7: '辰时', 9: '巳时', 11: '午时', 13: '未时',
+            15: '申时', 17: '酉时', 19: '戌时', 21: '亥时'
+        };
+        return shiChenMap[hour] || '';
     }
 }
 
@@ -644,6 +946,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (initFirebase()) {
             new AuthManager();
             new FortuneApp();
+            window.profileManager = new ProfileManager();
         } else {
             // 如果Firebase未加载，等待一下再试
             setTimeout(checkFirebase, 100);
