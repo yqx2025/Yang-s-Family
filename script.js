@@ -655,13 +655,26 @@ class ProfileManager {
         }
         // 立即尝试绑定全局事件委托
         this.bindGlobalEvents();
+        // 兜底：直接绑定按钮点击，确保在部分环境下也能弹出
+        const addBtn = document.getElementById('addPersonBtn');
+        if (addBtn) {
+            addBtn.addEventListener('click', (e) => {
+                console.log('直接绑定捕获到添加按钮点击');
+                e.preventDefault();
+                e.stopPropagation();
+                this.showAddPersonModal();
+            });
+        }
     }
 
     // 使用事件委托来处理点击事件
     bindGlobalEvents() {
         document.addEventListener('click', (e) => {
             // 处理添加新对象按钮
-            if (e.target.id === 'addPersonBtn' || e.target.closest('#addPersonBtn')) {
+            if (
+                (e.target && e.target.id === 'addPersonBtn') ||
+                (e.target && e.target.closest && (e.target.closest('#addPersonBtn') || e.target.closest('.add-person-btn')))
+            ) {
                 console.log('通过事件委托捕获到添加按钮点击');
                 e.preventDefault();
                 e.stopPropagation();
