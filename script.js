@@ -664,6 +664,10 @@ class ProfileManager {
                 e.stopPropagation();
                 this.showAddPersonModal();
             });
+            // 再兜底：内联 onclick，避免捕获/冒泡异常
+            if (!addBtn.getAttribute('onclick')) {
+                addBtn.setAttribute('onclick', 'try{window.profileManager && window.profileManager.showAddPersonModal();}catch(e){console.error(e)} return false;');
+            }
         }
     }
 
@@ -867,12 +871,30 @@ class ProfileManager {
     }
 
     showAddPersonModal() {
-        document.getElementById('addPersonModal').classList.remove('hidden');
+        const modal = document.getElementById('addPersonModal');
+        if (!modal) {
+            console.warn('未找到 addPersonModal');
+            return;
+        }
+        // 将弹窗移到 body，避免被父容器的样式（如 overflow/backdrop-filter）影响
+        if (modal.parentElement !== document.body) {
+            console.log('将弹窗节点移到 body 以避免样式影响');
+            document.body.appendChild(modal);
+        }
+        modal.classList.remove('hidden');
+        console.log('已显示添加对象弹窗');
     }
 
     hideAddPersonModal() {
-        document.getElementById('addPersonModal').classList.add('hidden');
-        document.getElementById('addPersonForm').reset();
+        const modal = document.getElementById('addPersonModal');
+        if (modal) {
+            modal.classList.add('hidden');
+        }
+        const form = document.getElementById('addPersonForm');
+        if (form) {
+            form.reset();
+        }
+        console.log('已关闭添加对象弹窗');
     }
 
     async handleAddPerson(e) {
