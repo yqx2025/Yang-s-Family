@@ -775,9 +775,9 @@ class ProfileManager {
         if (!auth.currentUser) return;
 
         try {
+            // 为避免索引问题，去掉服务端排序，改为客户端排序
             const snapshot = await db.collection('fortune_people')
                 .where('userId', '==', auth.currentUser.uid)
-                .orderBy('createdAt', 'desc')
                 .get();
 
             const peopleList = document.getElementById('peopleList');
@@ -792,21 +792,33 @@ class ProfileManager {
                 return;
             }
 
-            let html = '';
+            // 将结果转为数组并按创建时间降序排序
+            const records = [];
             snapshot.forEach(doc => {
-                const person = doc.data();
+                const data = doc.data();
+                records.push({ id: doc.id, ...data });
+            });
+
+            records.sort((a, b) => {
+                const dateA = a.createdAtIso ? new Date(a.createdAtIso).getTime() : (a.createdAt && a.createdAt.toDate ? a.createdAt.toDate().getTime() : 0);
+                const dateB = b.createdAtIso ? new Date(b.createdAtIso).getTime() : (b.createdAt && b.createdAt.toDate ? b.createdAt.toDate().getTime() : 0);
+                return dateB - dateA;
+            });
+
+            let html = '';
+            records.forEach(person => {
                 html += `
-                    <div class="person-card" data-id="${doc.id}">
+                    <div class="person-card" data-id="${person.id}">
                         <h4>${person.name}</h4>
                         <div class="person-info">
                             出生：${person.birthYear}年${person.birthMonth}月${person.birthDay}日
                             ${this.getShiChenName(person.birthHour)}
                         </div>
                         <div class="person-actions">
-                            <button class="btn-small btn-edit" onclick="profileManager.editPerson('${doc.id}')">
+                            <button class="btn-small btn-edit" onclick="profileManager.editPerson('${person.id}')">
                                 编辑
                             </button>
-                            <button class="btn-small btn-delete" onclick="profileManager.deletePerson('${doc.id}')">
+                            <button class="btn-small btn-delete" onclick="profileManager.deletePerson('${person.id}')">
                                 删除
                             </button>
                         </div>
@@ -914,7 +926,9 @@ class ProfileManager {
             birthMonth: parseInt(document.getElementById('personBirthMonth').value),
             birthDay: parseInt(document.getElementById('personBirthDay').value),
             birthHour: parseInt(document.getElementById('personBirthHour').value),
-            createdAt: new Date().toISOString()
+            // 同时写 serverTimestamp 和 ISO 字符串，便于排序与审计
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            createdAtIso: new Date().toISOString()
         };
 
         try {
