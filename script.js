@@ -972,27 +972,38 @@ class AuthManager {
     }
 
     addLogoutButton() {
-        // 在header中添加登出按钮
+        // 优先在导航栏中添加“退出登录”按钮，更醒目
+        const nav = document.querySelector('.navigation');
+        if (nav) {
+            const logoutBtn = document.createElement('button');
+            logoutBtn.className = 'nav-btn';
+            logoutBtn.title = '退出并清除缓存';
+            logoutBtn.innerHTML = '退出登录';
+            logoutBtn.addEventListener('click', () => this.handleLogout());
+            nav.appendChild(logoutBtn);
+            return;
+        }
+
+        // 兜底：加到header中，并使用深色样式避免看不见
         const header = document.querySelector('.header');
         if (header) {
             const logoutBtn = document.createElement('button');
-            logoutBtn.innerHTML = '<span class="material-icons">logout</span> 登出';
+            logoutBtn.innerHTML = '<span class="material-icons">logout</span> 退出登录';
             logoutBtn.className = 'logout-btn';
             logoutBtn.style.cssText = `
-                background: rgba(255, 255, 255, 0.1);
-                border: 1px solid rgba(255, 255, 255, 0.2);
-                color: white;
+                background: #ecf0f1;
+                border: 1px solid #d0d7de;
+                color: #2c3e50;
                 padding: 8px 16px;
                 border-radius: 8px;
                 cursor: pointer;
                 font-size: 14px;
-                display: flex;
+                display: inline-flex;
                 align-items: center;
-                gap: 4px;
+                gap: 6px;
                 transition: all 0.3s ease;
-                margin-left: auto;
+                position: relative;
             `;
-            
             logoutBtn.addEventListener('click', () => this.handleLogout());
             header.appendChild(logoutBtn);
         }
