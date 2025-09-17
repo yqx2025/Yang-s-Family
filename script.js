@@ -1000,11 +1000,58 @@ class AuthManager {
 
     async handleLogout() {
         try {
+            // 先清理客户端缓存与本地数据
+            await this.clearClientCaches();
+            // 退出登录
             await this.auth.signOut();
-            window.location.href = 'auth.html';
+            // 最稳妥的跳转
+            window.location.replace('auth.html');
         } catch (error) {
             console.error('登出失败:', error);
         }
+    }
+
+    // 清理所有可能的本地缓存：localStorage、sessionStorage、CacheStorage、IndexedDB
+    async clearClientCaches() {
+        // localStorage / sessionStorage
+        try { localStorage.clear(); } catch (e) { console.warn('清理localStorage失败', e); }
+        try { sessionStorage.clear(); } catch (e) { console.warn('清理sessionStorage失败', e); }
+
+        // Cache Storage（若存在 Service Worker 或预缓存）
+        try {
+            if ('caches' in window && caches.keys) {
+                const keys = await caches.keys();
+                await Promise.all(keys.map((key) => caches.delete(key)));
+            }
+        } catch (e) { console.warn('清理Cache Storage失败', e); }
+
+        // IndexedDB（Firebase/Firestore/安装信息等都会用）
+        try {
+            const deleteDb = (name) => new Promise((resolve) => {
+                try {
+                    const request = indexedDB.deleteDatabase(name);
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => resolve();
+                    request.onblocked = () => resolve();
+                } catch (_) { resolve(); }
+            });
+
+            if (indexedDB && indexedDB.databases) {
+                const dbs = await indexedDB.databases();
+                await Promise.all((dbs || []).map((db) => db && db.name ? deleteDb(db.name) : Promise.resolve()));
+            } else {
+                // Fallback: 常见的Firebase相关数据库名
+                const commonDbNames = [
+                    'firebaseLocalStorageDb',
+                    'firebase-installations-database',
+                    'firebase-messaging-database',
+                    'firebase-heartbeat-database',
+                    'firebase-auth-database',
+                    'firestore/[DEFAULT]/real-207a1'
+                ];
+                await Promise.all(commonDbNames.map(deleteDb));
+            }
+        } catch (e) { console.warn('清理IndexedDB失败', e); }
     }
 }
 
