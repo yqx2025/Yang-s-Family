@@ -506,6 +506,9 @@ class FortuneApp {
             console.log('算命结果已保存');
         } catch (error) {
             console.error('保存算命结果失败:', error);
+            if (error && (error.code === 'permission-denied' || /Missing or insufficient permissions/i.test(error.message || ''))) {
+                console.warn('Firestore 规则拒绝了写入 fortune_results');
+            }
         }
     }
 
@@ -598,6 +601,9 @@ class FortuneApp {
             console.log('八字结果已保存');
         } catch (error) {
             console.error('保存八字结果失败:', error);
+            if (error && (error.code === 'permission-denied' || /Missing or insufficient permissions/i.test(error.message || ''))) {
+                console.warn('Firestore 规则拒绝了写入 fortune_results');
+            }
         }
     }
 
@@ -918,7 +924,11 @@ class ProfileManager {
             console.log('算命对象已添加');
         } catch (error) {
             console.error('添加算命对象失败:', error);
-            alert('添加失败，请重试');
+            if (error && (error.code === 'permission-denied' || /Missing or insufficient permissions/i.test(error.message || ''))) {
+                alert('添加失败：没有权限。请在 Firestore 规则中允许访问 fortune_people。');
+            } else {
+                alert('添加失败，请重试');
+            }
         }
     }
 
