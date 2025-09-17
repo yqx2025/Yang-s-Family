@@ -977,6 +977,9 @@ class AuthManager {
             if (!user) {
                 // 用户未登录，跳转到认证页面
                 window.location.href = 'auth.html';
+            } else {
+                // 登录/注册后确保用户档案写入 Firestore
+                this.upsertUserProfile(user).catch((e) => console.warn('写入用户档案失败(index)：', e));
             }
         });
     }
@@ -1073,6 +1076,34 @@ class AuthManager {
                 await Promise.all(commonDbNames.map(deleteDb));
             }
         } catch (e) { console.warn('清理IndexedDB失败', e); }
+    }
+
+    // 写入/合并更新用户档案到 Firestore users/{uid}
+    async upsertUserProfile(user) {
+        try {
+            if (!firebaseReady || !db || !user) return;
+            const uid = user.uid;
+            const userRef = db.collection('users').doc(uid);
+            const now = firebase.firestore.FieldValue.serverTimestamp();
+            const providerId = (user.providerData && user.providerData[0] && user.providerData[0].providerId) || 'password';
+
+            const data = {
+                uid: uid,
+                email: (user.email || '').trim(),
+                emailLower: (user.email || '').trim().toLowerCase(),
+                displayName: user.displayName || (user.email ? user.email.split('@')[0] : ''),
+                photoURL: user.photoURL || '',
+                emailVerified: !!user.emailVerified,
+                providerId: providerId,
+                lastLoginAt: now,
+                updatedAt: now
+            };
+
+            await userRef.set(data, { merge: true });
+            console.log('用户档案已同步到 Firestore');
+        } catch (error) {
+            console.warn('同步用户档案到 Firestore 失败：', error);
+        }
     }
 }
 
