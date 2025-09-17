@@ -20,7 +20,17 @@
             <button class="nav-btn active" data-tab="xiaoliuren">小六壬卜卦</button>
             <button class="nav-btn" data-tab="bazi">五行八字</button>
             <button class="nav-btn" data-tab="profile">我的</button>
+            <!-- <button class="nav-btn logout-btn" id="logoutBtn" style="float:right;">退出登录</button> -->
         </nav>
+        <script>
+            document.getElementById('logoutBtn').addEventListener('click', function() {
+                // 清除本地存储的登录信息（如有）
+                localStorage.removeItem('userToken');
+                sessionStorage.removeItem('userToken');
+                // 跳转到登录页面
+                window.location.href = 'auth.html';
+            });
+        </script>
 
         <!-- 小六壬卜卦页面 -->
         <div id="xiaoliuren" class="tab-content active">

@@ -2,7 +2,7 @@
 console.log('认证脚本开始加载');
 
 // Firebase相关变量
-let app, auth, googleProvider;
+let app, auth, db, googleProvider;
 let firebaseReady = false;
 
 // Firebase配置
@@ -44,6 +44,7 @@ async function initFirebase() {
         // 初始化Firebase应用
         app = firebase.initializeApp(firebaseConfig);
         auth = firebase.auth();
+        db = firebase.firestore();
         googleProvider = new firebase.auth.GoogleAuthProvider();
         
         firebaseReady = true;
@@ -202,6 +203,9 @@ class AuthApp {
 
         try {
             const userCredential = await auth.signInWithEmailAndPassword(email, password);
+            try {
+                await this.saveUserProfile(userCredential.user, { created: false });
+            } catch (e) { console.warn('保存用户资料失败(登录)：', e); }
             this.showSuccess('登录成功！正在跳转...');
             
             setTimeout(() => {
@@ -236,6 +240,9 @@ class AuthApp {
 
         try {
             const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+            try {
+                await this.saveUserProfile(userCredential.user, { created: true });
+            } catch (e) { console.warn('保存用户资料失败(注册)：', e); }
             this.showSuccess('注册成功！正在跳转...');
             
             setTimeout(() => {
@@ -261,6 +268,9 @@ class AuthApp {
 
         try {
             const result = await auth.signInWithPopup(googleProvider);
+            try {
+                await this.saveUserProfile(result.user, { created: false });
+            } catch (e) { console.warn('保存用户资料失败(Google)：', e); }
             this.showSuccess('Google登录成功！正在跳转...');
             
             setTimeout(() => {
@@ -455,6 +465,34 @@ class AuthApp {
         errorDiv.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#f8d7da;color:#721c24;padding:20px;border-radius:8px;z-index:9999;max-width:400px;text-align:center;';
         errorDiv.innerHTML = '<h3>Firebase加载失败</h3><p>请检查网络连接并刷新页面</p><button onclick="location.reload()" style="padding:8px 16px;margin-top:10px;background:#dc3545;color:white;border:none;border-radius:4px;cursor:pointer;">刷新页面</button>';
         document.body.appendChild(errorDiv);
+    }
+
+    // 将用户信息存储到 Firestore（users/{uid}），重复调用会合并更新
+    async saveUserProfile(user, { created }) {
+        if (!firebaseReady || !db || !user) return;
+        const uid = user.uid;
+        const userRef = db.collection('users').doc(uid);
+
+        const providerId = (user.providerData && user.providerData[0] && user.providerData[0].providerId) || 'password';
+        const now = firebase.firestore.FieldValue.serverTimestamp();
+
+        const baseData = {
+            uid: uid,
+            email: (user.email || '').trim(),
+            emailLower: (user.email || '').trim().toLowerCase(),
+            displayName: user.displayName || (user.email ? user.email.split('@')[0] : ''),
+            photoURL: user.photoURL || '',
+            emailVerified: !!user.emailVerified,
+            providerId: providerId,
+            lastLoginAt: now,
+            updatedAt: now
+        };
+
+        if (created) {
+            baseData.createdAt = now;
+        }
+
+        await userRef.set(baseData, { merge: true });
     }
 }
 
