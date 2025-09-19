@@ -15,7 +15,7 @@ let firebaseReady = false;
 // 等待Firebase SDK加载并初始化
 function initFirebase() {
     try {
-        if (window.firebase && window.firebase.auth && window.firebase.firestore) {
+        if (typeof firebase !== 'undefined' && firebase.auth && firebase.firestore) {
             app = firebase.initializeApp(firebaseConfig);
             auth = firebase.auth();
             db = firebase.firestore();
