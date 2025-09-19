@@ -143,20 +143,19 @@ class XiaoLiuRen {
         return this.shiChen[shiChenHour];
     }
 
-    // 小六壬起课算法
+    // 小六壬起课算法（随机化）
     qiKe() {
-        const lunarMonth = this.getCurrentLunarMonth();
-        const currentShiChen = this.getCurrentShiChen();
-        
-        // 获取月将
-        const yueJiangZhi = this.yueJiang[lunarMonth];
+        // 随机选择月将（1-12月）
+        const randomMonth = Math.floor(Math.random() * 12) + 1;
+        const yueJiangZhi = this.yueJiang[randomMonth];
         const yueJiangIndex = this.diZhi.indexOf(yueJiangZhi);
         
-        // 获取时辰索引
-        const shiChenIndex = this.diZhi.indexOf(currentShiChen);
+        // 随机选择时辰
+        const randomShiChenIndex = Math.floor(Math.random() * 12);
+        const currentShiChen = this.diZhi[randomShiChenIndex];
         
         // 计算月将加时辰的位置
-        const totalIndex = (yueJiangIndex + shiChenIndex) % 12;
+        const totalIndex = (yueJiangIndex + randomShiChenIndex) % 12;
         
         // 转换为六神位置（大安在寅位，即索引2）
         const daAnIndex = 2; // 寅位
@@ -633,7 +632,7 @@ class FortuneApp {
     }
 
     showBaziResult(baZi, wuXingAnalysis) {
-        // 只显示AI解读，隐藏传统分析内容
+        // 显示八字结果
         document.getElementById('baziResult').classList.remove('hidden');
         
         // 滚动到结果位置
@@ -642,12 +641,96 @@ class FortuneApp {
         // 保存八字结果到Firestore
         this.saveBaziResult(baZi, wuXingAnalysis);
 
-        // 调用AI解读
-        this.requestAIAnswer({
-            type: 'bazi',
-            prompt: `请根据以下四柱与五行统计，给出简洁友善的中文建议（50-120字），强调娱乐性质：\n年柱：${baZi.year.gan}${baZi.year.zhi}\n月柱：${baZi.month.gan}${baZi.month.zhi}\n日柱：${baZi.day.gan}${baZi.day.zhi}\n时柱：${baZi.hour.gan}${baZi.hour.zhi}\n五行统计：${JSON.stringify(wuXingAnalysis.count)}`,
-            targetId: 'aiBazi'
+        // 填充基本信息
+        this.fillBaziBasicInfo(baZi);
+        
+        // 填充四柱信息
+        this.fillBaziPillars(baZi);
+        
+        // 显示五行图表
+        this.showWuXingChart(wuXingAnalysis.count);
+
+        // 调用AI分析各个章节
+        this.requestComprehensiveBaziAnalysis(baZi, wuXingAnalysis);
+    }
+
+    // 填充基本信息
+    fillBaziBasicInfo(baZi) {
+        const year = document.getElementById('birthYear').value;
+        const month = document.getElementById('birthMonth').value;
+        const day = document.getElementById('birthDay').value;
+        const hour = document.getElementById('birthHour').value;
+        
+        const birthTime = `${year}年${month}月${day}日 ${this.getShiChenName(hour)}`;
+        
+        document.getElementById('baziName').textContent = '用户';
+        document.getElementById('baziGender').textContent = '待选择';
+        document.getElementById('baziBirthTime').textContent = birthTime;
+        document.getElementById('baziBirthPlace').textContent = '待填写';
+    }
+
+    // 填充四柱信息
+    fillBaziPillars(baZi) {
+        document.getElementById('yearGan').textContent = baZi.year.gan;
+        document.getElementById('yearZhi').textContent = baZi.year.zhi;
+        document.getElementById('monthGan').textContent = baZi.month.gan;
+        document.getElementById('monthZhi').textContent = baZi.month.zhi;
+        document.getElementById('dayGan').textContent = baZi.day.gan;
+        document.getElementById('dayZhi').textContent = baZi.day.zhi;
+        document.getElementById('hourGan').textContent = baZi.hour.gan;
+        document.getElementById('hourZhi').textContent = baZi.hour.zhi;
+    }
+
+    // 获取时辰名称
+    getShiChenName(hour) {
+        const shiChenMap = {
+            '23': '子时', '1': '丑时', '3': '寅时', '5': '卯时',
+            '7': '辰时', '9': '巳时', '11': '午时', '13': '未时',
+            '15': '申时', '17': '酉时', '19': '戌时', '21': '亥时'
+        };
+        return shiChenMap[hour] || '未知时辰';
+    }
+
+    // 请求综合八字分析
+    async requestComprehensiveBaziAnalysis(baZi, wuXingAnalysis) {
+        const basePrompt = `根据以下八字信息进行专业分析：\n年柱：${baZi.year.gan}${baZi.year.zhi}\n月柱：${baZi.month.gan}${baZi.month.zhi}\n日柱：${baZi.day.gan}${baZi.day.zhi}\n时柱：${baZi.hour.gan}${baZi.hour.zhi}\n五行统计：${JSON.stringify(wuXingAnalysis.count)}\n\n请以专业、温和的语调提供娱乐性建议，不涉及医疗、法律、金融等严肃结论。`;
+
+        // 并行请求各个分析章节
+        const analyses = [
+            { section: '十神分析', prompt: `${basePrompt}\n\n请分析十神关系，包括比肩、劫财、食神、伤官、偏财、正财、七杀、正官、偏印、正印的含义和影响。`, targetId: 'shishenContent' },
+            { section: '五行分析', prompt: `${basePrompt}\n\n请分析五行强弱、生克制化关系，以及五行对性格和运势的影响。`, targetId: 'wuxingContent' },
+            { section: '大运流年', prompt: `${basePrompt}\n\n请分析大运流年的基本规律和注意事项。`, targetId: 'dayunContent' },
+            { section: '性格特征', prompt: `${basePrompt}\n\n请分析基于八字的性格特征，包括优点和需要注意的方面。`, targetId: 'personalityContent' },
+            { section: '事业财运', prompt: `${basePrompt}\n\n请分析事业发展和财运方面的特点和建议。`, targetId: 'careerContent' },
+            { section: '感情婚姻', prompt: `${basePrompt}\n\n请分析感情婚姻方面的特点和注意事项。`, targetId: 'relationshipContent' },
+            { section: '健康运势', prompt: `${basePrompt}\n\n请分析健康方面的特点和养生建议。`, targetId: 'healthContent' },
+            { section: '综合建议', prompt: `${basePrompt}\n\n请提供综合性的生活建议和人生指导。`, targetId: 'comprehensiveContent' }
+        ];
+
+        // 为每个分析添加加载状态
+        analyses.forEach(analysis => {
+            const target = document.getElementById(analysis.targetId);
+            if (target) {
+                target.innerHTML = '<div style="padding:10px;border-left:3px solid #667eea;color:#4a5568;">AI 分析生成中...</div>';
+            }
         });
+
+        // 并行执行所有AI分析
+        const promises = analyses.map(analysis => 
+            this.requestAIAnswer({
+                type: 'bazi',
+                prompt: analysis.prompt,
+                targetId: analysis.targetId
+            }).catch(error => {
+                console.warn(`${analysis.section} 分析失败:`, error);
+                const target = document.getElementById(analysis.targetId);
+                if (target) {
+                    target.innerHTML = '<div style="padding:10px;border-left:3px solid #e53e3e;color:#c53030;">分析生成失败，请稍后再试。</div>';
+                }
+            })
+        );
+
+        await Promise.all(promises);
     }
 
     async saveBaziResult(baZi, wuXingAnalysis) {

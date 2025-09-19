@@ -128,8 +128,31 @@
                 </div>
 
                 <div id="baziResult" class="bazi-result hidden">
-                    <h3>八字分析结果</h3>
-                    <div class="bazi-display">
+                    <h3>八字排盘分析</h3>
+                    
+                    <!-- 基本信息 -->
+                    <div class="bazi-basic-info">
+                        <div class="info-item">
+                            <span class="info-label">姓名：</span>
+                            <span id="baziName" class="info-value">待填写</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">性别：</span>
+                            <span id="baziGender" class="info-value">待填写</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">出生时间：</span>
+                            <span id="baziBirthTime" class="info-value">待填写</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">出生地点：</span>
+                            <span id="baziBirthPlace" class="info-value">待填写</span>
+                        </div>
+                    </div>
+
+                    <!-- 四柱排盘 -->
+                    <div class="bazi-pillars-section">
+                        <h4>四柱排盘</h4>
                         <div class="bazi-pillars">
                             <div class="pillar">
                                 <div class="pillar-title">年柱</div>
@@ -160,13 +183,55 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
 
-                        <div class="wuxing-analysis">
-                            <h4>五行分析</h4>
-                            <div id="wuxingChart" class="wuxing-chart"></div>
-                            <div id="wuxingDescription" class="wuxing-description"></div>
-                            <div id="aiBazi" style="margin-top:12px; text-align:left;"></div>
-                        </div>
+                    <!-- 十神分析 -->
+                    <div class="shishen-analysis">
+                        <h4>十神分析</h4>
+                        <div id="shishenContent" class="analysis-content"></div>
+                    </div>
+
+                    <!-- 五行分析 -->
+                    <div class="wuxing-analysis">
+                        <h4>五行分析</h4>
+                        <div id="wuxingChart" class="wuxing-chart"></div>
+                        <div id="wuxingContent" class="analysis-content"></div>
+                    </div>
+
+                    <!-- 大运流年 -->
+                    <div class="dayun-analysis">
+                        <h4>大运流年</h4>
+                        <div id="dayunContent" class="analysis-content"></div>
+                    </div>
+
+                    <!-- 性格特征 -->
+                    <div class="personality-analysis">
+                        <h4>性格特征</h4>
+                        <div id="personalityContent" class="analysis-content"></div>
+                    </div>
+
+                    <!-- 事业财运 -->
+                    <div class="career-analysis">
+                        <h4>事业财运</h4>
+                        <div id="careerContent" class="analysis-content"></div>
+                    </div>
+
+                    <!-- 感情婚姻 -->
+                    <div class="relationship-analysis">
+                        <h4>感情婚姻</h4>
+                        <div id="relationshipContent" class="analysis-content"></div>
+                    </div>
+
+                    <!-- 健康运势 -->
+                    <div class="health-analysis">
+                        <h4>健康运势</h4>
+                        <div id="healthContent" class="analysis-content"></div>
+                    </div>
+
+                    <!-- 综合建议 -->
+                    <div class="comprehensive-analysis">
+                        <h4>综合建议</h4>
+                        <div id="comprehensiveContent" class="analysis-content"></div>
                     </div>
                 </div>
             </div>
