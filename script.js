@@ -486,6 +486,13 @@ class FortuneApp {
         
         // 保存算命结果到Firestore
         this.saveFortuneResult('xiaoliuren', result);
+
+        // 调用AI解读
+        this.requestAIAnswer({
+            type: 'xiaoliuren',
+            prompt: `根据小六壬起课结果进行简洁友善的解读：\n月将：${result.yueJiang}\n时辰：${result.shiChen}\n主课：${result.result}\n吉凶：${result.meaning.fortune}\n建议：${result.meaning.advice}\n请给出面向普通用户的中文建议，50-120字。`,
+            targetId: 'aiDivination'
+        });
     }
 
     async saveFortuneResult(type, result) {
@@ -575,6 +582,13 @@ class FortuneApp {
         
         // 保存八字结果到Firestore
         this.saveBaziResult(baZi, wuXingAnalysis);
+
+        // 调用AI解读
+        this.requestAIAnswer({
+            type: 'bazi',
+            prompt: `请根据以下四柱与五行统计，给出简洁友善的中文建议（50-120字），强调娱乐性质：\n年柱：${baZi.year.gan}${baZi.year.zhi}\n月柱：${baZi.month.gan}${baZi.month.zhi}\n日柱：${baZi.day.gan}${baZi.day.zhi}\n时柱：${baZi.hour.gan}${baZi.hour.zhi}\n五行统计：${JSON.stringify(wuXingAnalysis.count)}`,
+            targetId: 'aiBazi'
+        });
     }
 
     async saveBaziResult(baZi, wuXingAnalysis) {
@@ -646,6 +660,37 @@ class FortuneApp {
         chartDiv.innerHTML = chartHTML;
     }
 }
+
+// AI 请求封装（调用 Netlify Function）
+FortuneApp.prototype.requestAIAnswer = async function({ type, prompt, targetId }) {
+    try {
+        const target = document.getElementById(targetId);
+        if (target) {
+            target.innerHTML = '<div style="padding:10px;border-left:3px solid #667eea;color:#4a5568;">AI 解读生成中...</div>';
+        }
+
+        const resp = await fetch('/.netlify/functions/ai', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt, context: { type } })
+        });
+
+        if (!resp.ok) {
+            const txt = await resp.text();
+            throw new Error(txt || 'AI 服务请求失败');
+        }
+        const data = await resp.json();
+        if (target) {
+            target.innerHTML = `<div style="padding:10px;border-left:3px solid #667eea;color:#2d3748;white-space:pre-wrap;">${(data.answer || '').trim()}</div>`;
+        }
+    } catch (e) {
+        const target = document.getElementById(targetId);
+        if (target) {
+            target.innerHTML = '<div style="padding:10px;border-left:3px solid #e53e3e;color:#c53030;">AI 解读失败，请稍后再试。</div>';
+        }
+        console.warn('AI 请求失败', e);
+    }
+};
 
 // 个人档案管理
 class ProfileManager {
