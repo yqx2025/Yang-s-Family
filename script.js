@@ -248,7 +248,7 @@ class BaZi {
 
     // 调用OpenAI API
     async callOpenAI(prompt) {
-        const apiKey = "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";
+        const apiKey = process.env.OPENAI_API_KEY || "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";
         
         const payload = {
             model: 'gpt-4o',
@@ -993,7 +993,7 @@ class FortuneApp {
 
 // AI 请求封装（直接在前端调用，需要在“AI设置”中保存 API Key）
 // 固定在代码中的 API Key（用户要求）
-const OPENAI_API_KEY = "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";
+    const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "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";
 
 FortuneApp.prototype.requestAIAnswer = async function({ type, prompt, targetId }) {
     try {
