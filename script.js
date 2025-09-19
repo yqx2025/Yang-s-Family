@@ -676,33 +676,109 @@ FortuneApp.prototype.requestAIAnswer = async function({ type, prompt, targetId }
 
         const apiKey = OPENAI_API_KEY;
 
-        const payload = {
-            model: 'gpt-5',
-            messages: [
-                { role: 'system', content: '你是一个精通传统文化的小六壬与八字解读助手，请以温和、简洁、尊重的语气提供娱乐性建议，不涉及医疗、法律、金融等严肃结论。' },
-                { role: 'user', content: prompt }
-            ],
-            temperature: 0.7,
-            max_tokens: 600
+        // 优先尝试 /v1/responses 接口（gpt-5 更可能支持）
+        const callResponses = async () => {
+            const payload = {
+                model: 'gpt-5',
+                input: prompt,
+                max_output_tokens: 600
+            };
+            const resp = await fetch('https://api.openai.com/v1/responses', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify(payload)
+            });
+            if (!resp.ok) {
+                const txt = await resp.text();
+                throw new Error(txt || 'responses 接口失败');
+            }
+            const data = await resp.json();
+            console.log('AI responses raw:', data);
+            let text = '';
+            
+            // 根据控制台看到的实际结构解析
+            if (Array.isArray(data.output) && data.output.length > 0) {
+                const output = data.output[0];
+                if (output && typeof output === 'object') {
+                    // 尝试多种可能的文本字段
+                    if (typeof output.text === 'string') {
+                        text = output.text;
+                    } else if (typeof output.content === 'string') {
+                        text = output.content;
+                    } else if (Array.isArray(output.content) && output.content.length > 0) {
+                        const content = output.content[0];
+                        if (content && typeof content.text === 'string') {
+                            text = content.text;
+                        } else if (content && typeof content === 'string') {
+                            text = content;
+                        }
+                    }
+                }
+            }
+            
+            // 兜底：尝试其他字段
+            if (!text) {
+                if (typeof data.output_text === 'string' && data.output_text.trim()) {
+                    text = data.output_text;
+                } else if (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) {
+                    text = data.choices[0].message.content;
+                }
+            }
+            
+            console.log('AI extracted text:', text);
+            return text;
         };
 
-        const resp = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`
-            },
-            body: JSON.stringify(payload)
-        });
+        const callChatCompletions = async () => {
+            const payload = {
+                model: 'gpt-5',
+                messages: [
+                    { role: 'system', content: '你是一个精通传统文化的小六壬与八字解读助手，请以温和、简洁、尊重的语气提供娱乐性建议，不涉及医疗、法律、金融等严肃结论。' },
+                    { role: 'user', content: prompt }
+                ],
+                max_completion_tokens: 600
+            };
+            const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
+                body: JSON.stringify(payload)
+            });
+            if (!resp.ok) {
+                const txt = await resp.text();
+                throw new Error(txt || 'chat.completions 接口失败');
+            }
+            const data = await resp.json();
+            console.log('AI chat raw:', data);
+            let text = '';
+            if (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) {
+                text = data.choices[0].message.content;
+            } else if (typeof data.output_text === 'string') {
+                text = data.output_text;
+            }
+            return text;
+        };
 
-        if (!resp.ok) {
-            const txt = await resp.text();
-            throw new Error(txt || 'AI 服务请求失败');
+        let answer = '';
+        try {
+            answer = await callResponses();
+        } catch (e1) {
+            console.warn('responses 接口失败，回退 chat.completions', e1);
+            try {
+                answer = await callChatCompletions();
+            } catch (e2) {
+                throw e2;
+            }
         }
-        const data = await resp.json();
-        const answer = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
+
         if (target) {
-            target.innerHTML = `<div style="padding:10px;border-left:3px solid #667eea;color:#2d3748;white-space:pre-wrap;">${answer.trim()}</div>`;
+            const finalText = (answer || '').trim();
+            target.innerHTML = finalText ? `<div style="padding:10px;border-left:3px solid #667eea;color:#2d3748;white-space:pre-wrap;">${finalText}</div>` : '<div style="padding:10px;border-left:3px solid #e53e3e;color:#c53030;">AI 解读为空，请稍后再试。</div>';
         }
     } catch (e) {
         const target = document.getElementById(targetId);
