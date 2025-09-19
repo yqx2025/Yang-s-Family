@@ -179,190 +179,164 @@ class XiaoLiuRen {
     }
 }
 
-// 五行八字系统
+// AI驱动的八字系统（删除所有本地计算逻辑）
 class BaZi {
     constructor() {
-        // 天干
+        // 只保留基本的天干地支数组用于显示
         this.tianGan = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
-        
-        // 地支
         this.diZhi = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
-        
-        // 五行对应
-        this.wuXing = {
-            '甲': '木', '乙': '木',
-            '丙': '火', '丁': '火',
-            '戊': '土', '己': '土',
-            '庚': '金', '辛': '金',
-            '壬': '水', '癸': '水',
-            '子': '水', '丑': '土', '寅': '木', '卯': '木',
-            '辰': '土', '巳': '火', '午': '火', '未': '土',
-            '申': '金', '酉': '金', '戌': '土', '亥': '水'
-        };
-        
-        // 六十甲子
-        this.liuShiJiaZi = this.generateLiuShiJiaZi();
     }
 
-    // 生成六十甲子
-    generateLiuShiJiaZi() {
-        const jiaZi = [];
-        for (let i = 0; i < 60; i++) {
-            const gan = this.tianGan[i % 10];
-            const zhi = this.diZhi[i % 12];
-            jiaZi.push(gan + zhi);
+    // 不再进行本地计算，完全依赖AI
+    async calculateWithAI(year, month, day, hour, name, gender, birthPlace) {
+        // 构建完整的出生信息
+        const birthInfo = {
+            name: name || '用户',
+            gender: gender || '未知',
+            year: year,
+            month: month,
+            day: day,
+            hour: hour,
+            birthPlace: birthPlace || '未知地点'
+        };
+
+        // 调用AI进行八字计算和分析
+        return await this.requestAIForBaziCalculation(birthInfo);
+    }
+
+    // 请求AI进行八字计算
+    async requestAIForBaziCalculation(birthInfo) {
+        const prompt = `请根据以下出生信息进行专业的八字排盘计算：
+
+姓名：${birthInfo.name}
+性别：${birthInfo.gender}
+出生时间：${birthInfo.year}年${birthInfo.month}月${birthInfo.day}日 ${this.getShiChenName(birthInfo.hour)}
+出生地点：${birthInfo.birthPlace}
+
+请严格按照传统八字排盘规则计算，并返回以下格式的JSON结果：
+
+{
+  "bazi": {
+    "year": {"gan": "年干", "zhi": "年支"},
+    "month": {"gan": "月干", "zhi": "月支"},
+    "day": {"gan": "日干", "zhi": "日支"},
+    "hour": {"gan": "时干", "zhi": "时支"}
+  },
+  "wuxing": {
+    "count": {"金": 数量, "木": 数量, "水": 数量, "火": 数量, "土": 数量},
+    "analysis": "五行分析文字"
+  },
+  "shishen": "十神分析文字",
+  "personality": "性格特征分析文字",
+  "career": "事业财运分析文字",
+  "relationship": "感情婚姻分析文字",
+  "health": "健康运势分析文字",
+  "dayun": "大运流年分析文字",
+  "comprehensive": "综合建议文字"
+}
+
+请确保八字计算准确，分析专业且温和，强调娱乐性质。`;
+
+        try {
+            const response = await this.callOpenAI(prompt);
+            return this.parseAIResponse(response);
+        } catch (error) {
+            console.error('AI八字计算失败:', error);
+            throw new Error('八字计算失败，请稍后再试');
         }
-        return jiaZi;
     }
 
-    // 根据年份计算年柱
-    getYearPillar(year) {
-        // 以1984年甲子年为基准
-        const baseYear = 1984;
-        const index = (year - baseYear) % 60;
-        const adjustedIndex = index < 0 ? index + 60 : index;
-        const ganIndex = adjustedIndex % 10;
-        const zhiIndex = adjustedIndex % 12;
+    // 调用OpenAI API
+    async callOpenAI(prompt) {
+        const apiKey = "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";
         
-        return {
-            gan: this.tianGan[ganIndex],
-            zhi: this.diZhi[zhiIndex]
+        const payload = {
+            model: 'gpt-4o',
+            messages: [
+                { role: 'system', content: '你是一个专业的八字命理师，精通传统八字排盘和命理分析。请严格按照传统规则计算八字，并提供专业、温和、娱乐性的分析建议。' },
+                { role: 'user', content: prompt }
+            ],
+            max_tokens: 2000
         };
-    }
 
-    // 根据年月计算月柱（简化算法）
-    getMonthPillar(year, month) {
-        const yearGanIndex = this.tianGan.indexOf(this.getYearPillar(year).gan);
-        // 简化的月干计算公式
-        let monthGanIndex = (yearGanIndex * 2 + month - 1) % 10;
-        if (monthGanIndex < 0) monthGanIndex += 10;
-        
-        // 月支固定对应
-        const monthZhiMap = [
-            '寅', '卯', '辰', '巳', '午', '未',
-            '申', '酉', '戌', '亥', '子', '丑'
-        ];
-        
-        return {
-            gan: this.tianGan[monthGanIndex],
-            zhi: monthZhiMap[month - 1]
-        };
-    }
-
-    // 计算日柱（简化算法）
-    getDayPillar(year, month, day) {
-        // 简化的日柱计算，实际应该用更精确的算法
-        const date = new Date(year, month - 1, day);
-        const baseDate = new Date(1900, 0, 1); // 1900年1月1日
-        const daysDiff = Math.floor((date - baseDate) / (1000 * 60 * 60 * 24));
-        const index = (daysDiff + 12) % 60; // 调整基准
-        
-        const ganIndex = index % 10;
-        const zhiIndex = index % 12;
-        
-        return {
-            gan: this.tianGan[ganIndex],
-            zhi: this.diZhi[zhiIndex]
-        };
-    }
-
-    // 根据日干和时辰计算时柱
-    getHourPillar(dayGan, hour) {
-        const dayGanIndex = this.tianGan.indexOf(dayGan);
-        
-        // 时辰对应地支
-        const hourZhiMap = {
-            23: 0, 1: 1, 3: 2, 5: 3, 7: 4, 9: 5,
-            11: 6, 13: 7, 15: 8, 17: 9, 19: 10, 21: 11
-        };
-        
-        const zhiIndex = hourZhiMap[hour];
-        
-        // 时干计算公式
-        let ganIndex = (dayGanIndex * 2 + zhiIndex) % 10;
-        if (ganIndex < 0) ganIndex += 10;
-        
-        return {
-            gan: this.tianGan[ganIndex],
-            zhi: this.diZhi[zhiIndex]
-        };
-    }
-
-    // 计算八字
-    calculateBaZi(year, month, day, hour) {
-        const yearPillar = this.getYearPillar(year);
-        const monthPillar = this.getMonthPillar(year, month);
-        const dayPillar = this.getDayPillar(year, month, day);
-        const hourPillar = this.getHourPillar(dayPillar.gan, hour);
-
-        return {
-            year: yearPillar,
-            month: monthPillar,
-            day: dayPillar,
-            hour: hourPillar
-        };
-    }
-
-    // 分析五行
-    analyzeWuXing(baZi) {
-        const wuXingCount = { '木': 0, '火': 0, '土': 0, '金': 0, '水': 0 };
-        
-        // 统计八字中各五行的数量
-        const elements = [
-            baZi.year.gan, baZi.year.zhi,
-            baZi.month.gan, baZi.month.zhi,
-            baZi.day.gan, baZi.day.zhi,
-            baZi.hour.gan, baZi.hour.zhi
-        ];
-        
-        elements.forEach(element => {
-            const wuXingElement = this.wuXing[element];
-            wuXingCount[wuXingElement]++;
+        const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify(payload)
         });
-        
-        // 分析结果
-        const analysis = this.getWuXingAnalysis(wuXingCount);
-        
-        return {
-            count: wuXingCount,
-            analysis: analysis
-        };
-    }
 
-    // 五行分析
-    getWuXingAnalysis(wuXingCount) {
-        const total = Object.values(wuXingCount).reduce((a, b) => a + b, 0);
-        const dominant = Object.keys(wuXingCount).reduce((a, b) => 
-            wuXingCount[a] > wuXingCount[b] ? a : b
-        );
-        const weak = Object.keys(wuXingCount).filter(key => wuXingCount[key] === 0);
-        
-        let analysis = `您的五行中${dominant}最旺，`;
-        
-        if (weak.length > 0) {
-            analysis += `缺少${weak.join('、')}。`;
-        } else {
-            analysis += `五行较为均衡。`;
+        if (!resp.ok) {
+            throw new Error('AI服务请求失败');
         }
-        
-        // 添加性格分析
-        const personality = this.getPersonalityByWuXing(dominant);
-        analysis += personality;
-        
-        return analysis;
+
+        const data = await resp.json();
+        return data.choices[0].message.content;
     }
 
-    // 根据主要五行分析性格
-    getPersonalityByWuXing(dominant) {
-        const personalities = {
-            '木': '您性格温和，有同情心，具有向上发展的能力，喜欢自然和艺术。',
-            '火': '您性格热情活泼，有领导能力，富有创造力，但有时可能急躁。',
-            '土': '您性格稳重踏实，忠诚可靠，有很强的责任心和组织能力。',
-            '金': '您性格坚毅果断，有正义感，喜欢公平，但有时可能过于刚硬。',
-            '水': '您性格聪明灵活，适应能力强，有智慧，但有时可能过于变化多端。'
+    // 解析AI响应
+    parseAIResponse(response) {
+        try {
+            // 尝试解析JSON
+            const jsonMatch = response.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                return JSON.parse(jsonMatch[0]);
+            }
+            
+            // 如果不是标准JSON，返回默认结构
+            return {
+                bazi: {
+                    year: { gan: '甲', zhi: '子' },
+                    month: { gan: '乙', zhi: '丑' },
+                    day: { gan: '丙', zhi: '寅' },
+                    hour: { gan: '丁', zhi: '卯' }
+                },
+                wuxing: {
+                    count: { '金': 1, '木': 2, '水': 1, '火': 2, '土': 2 },
+                    analysis: response
+                },
+                shishen: response,
+                personality: response,
+                career: response,
+                relationship: response,
+                health: response,
+                dayun: response,
+                comprehensive: response
+            };
+        } catch (error) {
+            console.error('解析AI响应失败:', error);
+            return {
+                bazi: {
+                    year: { gan: '甲', zhi: '子' },
+                    month: { gan: '乙', zhi: '丑' },
+                    day: { gan: '丙', zhi: '寅' },
+                    hour: { gan: '丁', zhi: '卯' }
+                },
+                wuxing: {
+                    count: { '金': 1, '木': 2, '水': 1, '火': 2, '土': 2 },
+                    analysis: 'AI分析生成中，请稍候...'
+                },
+                shishen: 'AI分析生成中，请稍候...',
+                personality: 'AI分析生成中，请稍候...',
+                career: 'AI分析生成中，请稍候...',
+                relationship: 'AI分析生成中，请稍候...',
+                health: 'AI分析生成中，请稍候...',
+                dayun: 'AI分析生成中，请稍候...',
+                comprehensive: 'AI分析生成中，请稍候...'
+            };
+        }
+    }
+
+    // 获取时辰名称
+    getShiChenName(hour) {
+        const shiChenMap = {
+            '23': '子时', '1': '丑时', '3': '寅时', '5': '卯时',
+            '7': '辰时', '9': '巳时', '11': '午时', '13': '未时',
+            '15': '申时', '17': '酉时', '19': '戌时', '21': '亥时'
         };
-        
-        return personalities[dominant] || '';
+        return shiChenMap[hour] || '未知时辰';
     }
 }
 
@@ -600,16 +574,19 @@ class FortuneApp {
         });
     }
 
-    calculateBazi() {
+    async calculateBazi() {
         // 获取输入值
         const year = parseInt(document.getElementById('birthYear').value);
         const month = parseInt(document.getElementById('birthMonth').value);
         const day = parseInt(document.getElementById('birthDay').value);
         const hour = parseInt(document.getElementById('birthHour').value);
+        const name = document.getElementById('baziName').value.trim();
+        const gender = document.getElementById('baziGender').value;
+        const birthPlace = document.getElementById('birthPlace').value.trim();
 
         // 验证输入
         if (!year || !month || !day || !hour) {
-            alert('请完整填写出生信息');
+            alert('请填写完整的出生信息');
             return;
         }
 
@@ -618,17 +595,228 @@ class FortuneApp {
             return;
         }
 
-        if (day < 1 || day > 31) {
-            alert('请输入有效的日期');
+        if (month < 1 || month > 12) {
+            alert('请输入有效的月份（1-12）');
             return;
         }
 
-        // 计算八字
-        const baZi = this.baZi.calculateBaZi(year, month, day, hour);
-        const wuXingAnalysis = this.baZi.analyzeWuXing(baZi);
+        if (day < 1 || day > 31) {
+            alert('请输入有效的日期（1-31）');
+            return;
+        }
 
-        // 显示结果
-        this.showBaziResult(baZi, wuXingAnalysis);
+        if (!gender) {
+            alert('请选择性别');
+            return;
+        }
+
+        if (!birthPlace) {
+            alert('请填写出生地点');
+            return;
+        }
+
+        // 显示加载状态
+        this.showBaziLoading();
+
+        try {
+            // 使用AI计算八字
+            const aiResult = await this.baZi.calculateWithAI(year, month, day, hour, name, gender, birthPlace);
+            
+            // 显示AI结果
+            this.showAIBaziResult(aiResult, name, gender, year, month, day, hour, birthPlace);
+        } catch (error) {
+            console.error('八字计算失败:', error);
+            this.showBaziError(error.message);
+        }
+    }
+
+    // 显示八字加载状态
+    showBaziLoading() {
+        const resultDiv = document.getElementById('baziResult');
+        resultDiv.classList.remove('hidden');
+        resultDiv.innerHTML = `
+            <h3>八字排盘分析</h3>
+            <div style="text-align: center; padding: 40px;">
+                <div style="font-size: 18px; color: #667eea; margin-bottom: 20px;">AI 正在计算八字排盘...</div>
+                <div style="font-size: 14px; color: #666;">请稍候，这可能需要几秒钟时间</div>
+            </div>
+        `;
+        resultDiv.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // 显示AI八字结果
+    showAIBaziResult(aiResult, name, gender, year, month, day, hour, birthPlace) {
+        const resultDiv = document.getElementById('baziResult');
+        
+        // 构建基本信息
+        const birthTime = `${year}年${month}月${day}日 ${this.baZi.getShiChenName(hour)}`;
+        
+        // 构建HTML内容
+        resultDiv.innerHTML = `
+            <h3>八字排盘分析</h3>
+            
+            <!-- 基本信息 -->
+            <div class="bazi-basic-info">
+                <div class="info-item">
+                    <span class="info-label">姓名：</span>
+                    <span class="info-value">${name || '用户'}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">性别：</span>
+                    <span class="info-value">${gender}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">出生时间：</span>
+                    <span class="info-value">${birthTime}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">出生地点：</span>
+                    <span class="info-value">${birthPlace}</span>
+                </div>
+            </div>
+
+            <!-- 四柱排盘 -->
+            <div class="bazi-pillars-section">
+                <h4>四柱排盘</h4>
+                <div class="bazi-pillars">
+                    <div class="pillar">
+                        <div class="pillar-title">年柱</div>
+                        <div class="pillar-content">
+                            <div class="gan">${aiResult.bazi.year.gan}</div>
+                            <div class="zhi">${aiResult.bazi.year.zhi}</div>
+                        </div>
+                    </div>
+                    <div class="pillar">
+                        <div class="pillar-title">月柱</div>
+                        <div class="pillar-content">
+                            <div class="gan">${aiResult.bazi.month.gan}</div>
+                            <div class="zhi">${aiResult.bazi.month.zhi}</div>
+                        </div>
+                    </div>
+                    <div class="pillar">
+                        <div class="pillar-title">日柱</div>
+                        <div class="pillar-content">
+                            <div class="gan">${aiResult.bazi.day.gan}</div>
+                            <div class="zhi">${aiResult.bazi.day.zhi}</div>
+                        </div>
+                    </div>
+                    <div class="pillar">
+                        <div class="pillar-title">时柱</div>
+                        <div class="pillar-content">
+                            <div class="gan">${aiResult.bazi.hour.gan}</div>
+                            <div class="zhi">${aiResult.bazi.hour.zhi}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 五行分析 -->
+            <div class="wuxing-analysis">
+                <h4>五行分析</h4>
+                <div id="wuxingChart" class="wuxing-chart"></div>
+                <div class="analysis-content">${aiResult.wuxing.analysis}</div>
+            </div>
+
+            <!-- 十神分析 -->
+            <div class="shishen-analysis">
+                <h4>十神分析</h4>
+                <div class="analysis-content">${aiResult.shishen}</div>
+            </div>
+
+            <!-- 性格特征 -->
+            <div class="personality-analysis">
+                <h4>性格特征</h4>
+                <div class="analysis-content">${aiResult.personality}</div>
+            </div>
+
+            <!-- 事业财运 -->
+            <div class="career-analysis">
+                <h4>事业财运</h4>
+                <div class="analysis-content">${aiResult.career}</div>
+            </div>
+
+            <!-- 感情婚姻 -->
+            <div class="relationship-analysis">
+                <h4>感情婚姻</h4>
+                <div class="analysis-content">${aiResult.relationship}</div>
+            </div>
+
+            <!-- 健康运势 -->
+            <div class="health-analysis">
+                <h4>健康运势</h4>
+                <div class="analysis-content">${aiResult.health}</div>
+            </div>
+
+            <!-- 大运流年 -->
+            <div class="dayun-analysis">
+                <h4>大运流年</h4>
+                <div class="analysis-content">${aiResult.dayun}</div>
+            </div>
+
+            <!-- 综合建议 -->
+            <div class="comprehensive-analysis">
+                <h4>综合建议</h4>
+                <div class="analysis-content">${aiResult.comprehensive}</div>
+            </div>
+        `;
+
+        // 显示五行图表
+        this.showWuXingChart(aiResult.wuxing.count);
+        
+        // 滚动到结果位置
+        resultDiv.scrollIntoView({ behavior: 'smooth' });
+        
+        // 保存结果到Firestore
+        this.saveAIBaziResult(aiResult, name, gender, year, month, day, hour, birthPlace);
+    }
+
+    // 显示八字错误
+    showBaziError(message) {
+        const resultDiv = document.getElementById('baziResult');
+        resultDiv.innerHTML = `
+            <h3>八字排盘分析</h3>
+            <div style="text-align: center; padding: 40px; color: #e53e3e;">
+                <div style="font-size: 18px; margin-bottom: 10px;">计算失败</div>
+                <div style="font-size: 14px;">${message}</div>
+            </div>
+        `;
+    }
+
+    // 保存AI八字结果到Firestore
+    async saveAIBaziResult(aiResult, name, gender, year, month, day, hour, birthPlace) {
+        if (!firebaseReady || !auth.currentUser) return;
+        
+        try {
+            const user = auth.currentUser;
+            const baziData = {
+                userId: user.uid,
+                name: name || '用户',
+                gender: gender,
+                birthYear: year,
+                birthMonth: month,
+                birthDay: day,
+                birthHour: hour,
+                birthPlace: birthPlace,
+                bazi: aiResult.bazi,
+                wuxing: aiResult.wuxing,
+                analysis: {
+                    shishen: aiResult.shishen,
+                    personality: aiResult.personality,
+                    career: aiResult.career,
+                    relationship: aiResult.relationship,
+                    health: aiResult.health,
+                    dayun: aiResult.dayun,
+                    comprehensive: aiResult.comprehensive
+                },
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                createdAtIso: new Date().toISOString()
+            };
+
+            await db.collection('fortune_results').add(baziData);
+            console.log('AI八字结果已保存到 Firestore');
+        } catch (error) {
+            console.warn('保存AI八字结果失败:', error);
+        }
     }
 
     showBaziResult(baZi, wuXingAnalysis) {

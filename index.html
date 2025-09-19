@@ -76,6 +76,21 @@
                     <h3>请输入出生信息</h3>
                     <div class="input-row">
                         <div class="input-group">
+                            <label for="baziName">姓名（选填）：</label>
+                            <input type="text" id="baziName" placeholder="请输入姓名">
+                        </div>
+                        <div class="input-group">
+                            <label for="baziGender">性别：</label>
+                            <select id="baziGender">
+                                <option value="">选择性别</option>
+                                <option value="男">男</option>
+                                <option value="女">女</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="input-row">
+                        <div class="input-group">
                             <label for="birthYear">出生年份：</label>
                             <input type="number" id="birthYear" min="1900" max="2100" placeholder="1990">
                         </div>
@@ -121,6 +136,13 @@
                                 <option value="19">戌时 (19:00-21:00)</option>
                                 <option value="21">亥时 (21:00-23:00)</option>
                             </select>
+                        </div>
+                    </div>
+                    
+                    <div class="input-row">
+                        <div class="input-group full-width">
+                            <label for="birthPlace">出生地点：</label>
+                            <input type="text" id="birthPlace" placeholder="请输入出生地点，如：北京市、上海市、广东省深圳市等">
                         </div>
                     </div>
 
