@@ -431,6 +431,64 @@ body::before {
     padding-top: 15px;
 }
 
+/* 卦象显示样式 */
+.divination-symbol {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 12px;
+    padding: 20px;
+    margin: 20px 0;
+    color: white;
+    box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
+}
+
+.divination-symbol h3 {
+    margin: 0 0 15px 0;
+    text-align: center;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.symbol-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.symbol-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    backdrop-filter: blur(10px);
+}
+
+.symbol-label {
+    font-size: 12px;
+    opacity: 0.8;
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.symbol-value {
+    font-size: 16px;
+    font-weight: 600;
+    text-align: center;
+}
+
+.symbol-value.fortune-good {
+    color: #4ade80;
+    text-shadow: 0 0 10px rgba(74, 222, 128, 0.5);
+}
+
+.symbol-value.fortune-bad {
+    color: #f87171;
+    text-shadow: 0 0 10px rgba(248, 113, 113, 0.5);
+}
+
 /* 五行八字样式 */
 .bazi-section {
     background: linear-gradient(135deg, 
@@ -692,6 +750,19 @@ body::before {
     .divination-section,
     .bazi-section {
         padding: 25px;
+    }
+    
+    .symbol-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+    
+    .symbol-item {
+        padding: 10px;
+    }
+    
+    .symbol-value {
+        font-size: 14px;
     }
     
     .divination-controls {

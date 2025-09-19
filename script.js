@@ -508,12 +508,49 @@ class FortuneApp {
         // 保存算命结果到Firestore
         this.saveFortuneResult('xiaoliuren', result);
 
+        // 显示卦象信息
+        this.displayDivinationSymbol(result);
+
         // 调用AI解读
         this.requestAIAnswer({
             type: 'xiaoliuren',
-            prompt: `根据小六壬起课结果进行简洁友善的解读：\n月将：${result.yueJiang}\n时辰：${result.shiChen}\n主课：${result.result}\n吉凶：${result.meaning.fortune}\n建议：${result.meaning.advice}\n请给出面向普通用户的中文建议，50-120字。`,
+            prompt: `根据小六壬起课结果进行简洁友善的解读：\n月将：${result.yueJiang}\n时辰：${result.shiChen}\n主课：${result.result}\n吉凶：${result.meaning.fortune}\n建议：${result.meaning.advice}\n请给出面向普通用户的中文建议，包含主课、吉凶和建议的解读，50-120字。`,
             targetId: 'aiDivination'
         });
+    }
+
+    // 显示卦象信息
+    displayDivinationSymbol(result) {
+        const symbolDiv = document.getElementById('divinationSymbol');
+        if (!symbolDiv) return;
+
+        // 创建卦象显示
+        const symbolHTML = `
+            <div class="divination-symbol">
+                <h3>卦象信息</h3>
+                <div class="symbol-grid">
+                    <div class="symbol-item">
+                        <span class="symbol-label">月将</span>
+                        <span class="symbol-value">${result.yueJiang}</span>
+                    </div>
+                    <div class="symbol-item">
+                        <span class="symbol-label">时辰</span>
+                        <span class="symbol-value">${result.shiChen}</span>
+                    </div>
+                    <div class="symbol-item">
+                        <span class="symbol-label">主课</span>
+                        <span class="symbol-value">${result.result}</span>
+                    </div>
+                    <div class="symbol-item">
+                        <span class="symbol-label">吉凶</span>
+                        <span class="symbol-value ${result.meaning.fortune.includes('吉') ? 'fortune-good' : 'fortune-bad'}">${result.meaning.fortune}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        symbolDiv.innerHTML = symbolHTML;
+        symbolDiv.classList.remove('hidden');
     }
 
     async saveFortuneResult(type, result) {
@@ -547,6 +584,12 @@ class FortuneApp {
         // 隐藏过程和结果
         document.getElementById('divinationProcess').classList.add('hidden');
         document.getElementById('divinationResult').classList.add('hidden');
+        
+        // 隐藏卦象信息
+        const symbolDiv = document.getElementById('divinationSymbol');
+        if (symbolDiv) {
+            symbolDiv.classList.add('hidden');
+        }
         
         // 重置过程动画元素
         const elements = ['yuejiang', 'shichen', 'qike'];
