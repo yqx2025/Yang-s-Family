@@ -409,6 +409,36 @@ class FortuneApp {
                 this.startDivination();
             }
         });
+
+        // AI 设置弹窗
+        const aiBtn = document.getElementById('aiSettingsBtn');
+        if (aiBtn) {
+            aiBtn.addEventListener('click', () => {
+                document.getElementById('aiKeyModal').classList.remove('hidden');
+                const input = document.getElementById('aiKeyInput');
+                const saved = localStorage.getItem('OPENAI_API_KEY') || '';
+                if (input) input.value = saved;
+            });
+        }
+
+        document.addEventListener('click', (e) => {
+            if (e.target && (e.target.id === 'closeAiModal' || e.target.closest && e.target.closest('#closeAiModal'))) {
+                document.getElementById('aiKeyModal').classList.add('hidden');
+            }
+            if (e.target && (e.target.id === 'cancelAi' || e.target.closest && e.target.closest('#cancelAi'))) {
+                document.getElementById('aiKeyModal').classList.add('hidden');
+            }
+        });
+
+        document.addEventListener('submit', (e) => {
+            if (e.target && e.target.id === 'aiKeyForm') {
+                e.preventDefault();
+                const key = document.getElementById('aiKeyInput').value.trim();
+                if (key) localStorage.setItem('OPENAI_API_KEY', key);
+                document.getElementById('aiKeyModal').classList.add('hidden');
+                alert('AI Key 已保存到本地');
+            }
+        });
     }
 
     showTab(tabName) {
@@ -661,7 +691,7 @@ class FortuneApp {
     }
 }
 
-// AI 请求封装（调用 Netlify Function）
+// AI 请求封装（直接在前端调用，需要在“AI设置”中保存 API Key）
 FortuneApp.prototype.requestAIAnswer = async function({ type, prompt, targetId }) {
     try {
         const target = document.getElementById(targetId);
@@ -669,15 +699,29 @@ FortuneApp.prototype.requestAIAnswer = async function({ type, prompt, targetId }
             target.innerHTML = '<div style="padding:10px;border-left:3px solid #667eea;color:#4a5568;">AI 解读生成中...</div>';
         }
 
-        // 本地开发使用 Netlify Dev 默认端口 8888；生产用相对路径
-        const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-        const base = isLocal ? (window.NETLIFY_DEV_URL || 'http://localhost:8888') : '';
-        const endpoint = `${base}/.netlify/functions/ai`;
+        const apiKey = localStorage.getItem('OPENAI_API_KEY');
+        if (!apiKey) {
+            if (target) target.innerHTML = '<div style="padding:10px;border-left:3px solid #e53e3e;color:#c53030;">未配置 API Key，请点击顶部“AI设置”保存密钥。</div>';
+            return;
+        }
 
-        const resp = await fetch(endpoint, {
+        const payload = {
+            model: 'gpt-5',
+            messages: [
+                { role: 'system', content: '你是一个精通传统文化的小六壬与八字解读助手，请以温和、简洁、尊重的语气提供娱乐性建议，不涉及医疗、法律、金融等严肃结论。' },
+                { role: 'user', content: prompt }
+            ],
+            temperature: 0.7,
+            max_tokens: 600
+        };
+
+        const resp = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt, context: { type } })
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify(payload)
         });
 
         if (!resp.ok) {
@@ -685,8 +729,9 @@ FortuneApp.prototype.requestAIAnswer = async function({ type, prompt, targetId }
             throw new Error(txt || 'AI 服务请求失败');
         }
         const data = await resp.json();
+        const answer = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
         if (target) {
-            target.innerHTML = `<div style="padding:10px;border-left:3px solid #667eea;color:#2d3748;white-space:pre-wrap;">${(data.answer || '').trim()}</div>`;
+            target.innerHTML = `<div style="padding:10px;border-left:3px solid #667eea;color:#2d3748;white-space:pre-wrap;">${answer.trim()}</div>`;
         }
     } catch (e) {
         const target = document.getElementById(targetId);
