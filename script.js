@@ -410,35 +410,7 @@ class FortuneApp {
             }
         });
 
-        // AI 设置弹窗
-        const aiBtn = document.getElementById('aiSettingsBtn');
-        if (aiBtn) {
-            aiBtn.addEventListener('click', () => {
-                document.getElementById('aiKeyModal').classList.remove('hidden');
-                const input = document.getElementById('aiKeyInput');
-                const saved = localStorage.getItem('OPENAI_API_KEY') || '';
-                if (input) input.value = saved;
-            });
-        }
-
-        document.addEventListener('click', (e) => {
-            if (e.target && (e.target.id === 'closeAiModal' || e.target.closest && e.target.closest('#closeAiModal'))) {
-                document.getElementById('aiKeyModal').classList.add('hidden');
-            }
-            if (e.target && (e.target.id === 'cancelAi' || e.target.closest && e.target.closest('#cancelAi'))) {
-                document.getElementById('aiKeyModal').classList.add('hidden');
-            }
-        });
-
-        document.addEventListener('submit', (e) => {
-            if (e.target && e.target.id === 'aiKeyForm') {
-                e.preventDefault();
-                const key = document.getElementById('aiKeyInput').value.trim();
-                if (key) localStorage.setItem('OPENAI_API_KEY', key);
-                document.getElementById('aiKeyModal').classList.add('hidden');
-                alert('AI Key 已保存到本地');
-            }
-        });
+        // （移除 AI 设置弹窗逻辑）
     }
 
     showTab(tabName) {
@@ -692,6 +664,9 @@ class FortuneApp {
 }
 
 // AI 请求封装（直接在前端调用，需要在“AI设置”中保存 API Key）
+// 固定在代码中的 API Key（用户要求）
+const OPENAI_API_KEY = "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";
+
 FortuneApp.prototype.requestAIAnswer = async function({ type, prompt, targetId }) {
     try {
         const target = document.getElementById(targetId);
@@ -699,11 +674,7 @@ FortuneApp.prototype.requestAIAnswer = async function({ type, prompt, targetId }
             target.innerHTML = '<div style="padding:10px;border-left:3px solid #667eea;color:#4a5568;">AI 解读生成中...</div>';
         }
 
-        const apiKey = localStorage.getItem('OPENAI_API_KEY');
-        if (!apiKey) {
-            if (target) target.innerHTML = '<div style="padding:10px;border-left:3px solid #e53e3e;color:#c53030;">未配置 API Key，请点击顶部“AI设置”保存密钥。</div>';
-            return;
-        }
+        const apiKey = OPENAI_API_KEY;
 
         const payload = {
             model: 'gpt-5',
