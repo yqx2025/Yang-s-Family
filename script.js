@@ -458,29 +458,48 @@ class FortuneApp {
         // 执行卜卦
         const result = this.xiaoLiuRen.qiKe();
 
-        // 显示过程信息
-        document.getElementById('yuejiang').textContent = result.yueJiang;
-        document.getElementById('shichen').textContent = result.shiChen;
-        document.getElementById('qike').textContent = result.result;
+        // 模拟卜卦过程动画
+        this.animateDivinationProcess(result);
 
         // 延迟显示结果，增加仪式感
         setTimeout(() => {
             this.showDivinationResult(result);
-        }, 1500);
+        }, 3000);
+    }
+
+    // 模拟卜卦过程动画
+    animateDivinationProcess(result) {
+        const elements = ['yuejiang', 'shichen', 'qike'];
+        const values = [result.yueJiang, result.shiChen, result.result];
+        
+        elements.forEach((id, index) => {
+            const element = document.getElementById(id);
+            element.textContent = '';
+            element.style.opacity = '0.3';
+            
+            // 随机显示一些过程文字
+            const processTexts = ['计算中...', '推算中...', '分析中...', '起课中...'];
+            let textIndex = 0;
+            
+            const interval = setInterval(() => {
+                element.textContent = processTexts[textIndex % processTexts.length];
+                textIndex++;
+            }, 200);
+            
+            // 2秒后显示最终结果
+            setTimeout(() => {
+                clearInterval(interval);
+                element.textContent = values[index];
+                element.style.opacity = '1';
+                element.style.transition = 'opacity 0.5s ease';
+            }, 2000 + (index * 300));
+        });
     }
 
     showDivinationResult(result) {
         const resultDiv = document.getElementById('divinationResult');
         
-        // 填充结果
-        document.getElementById('resultTitle').textContent = result.meaning.title;
-        document.getElementById('resultDescription').textContent = result.meaning.description;
-        document.getElementById('mainCourse').textContent = result.result;
-        document.getElementById('fortune').textContent = result.meaning.fortune;
-        document.getElementById('advice').textContent = result.meaning.advice;
-        document.getElementById('divinationTime').textContent = result.timestamp;
-
-        // 显示结果
+        // 只显示AI解读，隐藏传统解读内容
         resultDiv.classList.remove('hidden');
         
         // 滚动到结果位置
@@ -528,6 +547,15 @@ class FortuneApp {
         // 隐藏过程和结果
         document.getElementById('divinationProcess').classList.add('hidden');
         document.getElementById('divinationResult').classList.add('hidden');
+        
+        // 重置过程动画元素
+        const elements = ['yuejiang', 'shichen', 'qike'];
+        elements.forEach(id => {
+            const element = document.getElementById(id);
+            element.textContent = '';
+            element.style.opacity = '1';
+            element.style.transition = '';
+        });
     }
 
     calculateBazi() {
@@ -562,21 +590,7 @@ class FortuneApp {
     }
 
     showBaziResult(baZi, wuXingAnalysis) {
-        // 填充四柱
-        document.getElementById('yearGan').textContent = baZi.year.gan;
-        document.getElementById('yearZhi').textContent = baZi.year.zhi;
-        document.getElementById('monthGan').textContent = baZi.month.gan;
-        document.getElementById('monthZhi').textContent = baZi.month.zhi;
-        document.getElementById('dayGan').textContent = baZi.day.gan;
-        document.getElementById('dayZhi').textContent = baZi.day.zhi;
-        document.getElementById('hourGan').textContent = baZi.hour.gan;
-        document.getElementById('hourZhi').textContent = baZi.hour.zhi;
-
-        // 显示五行分析
-        this.showWuXingChart(wuXingAnalysis.count);
-        document.getElementById('wuxingDescription').textContent = wuXingAnalysis.analysis;
-
-        // 显示结果区域
+        // 只显示AI解读，隐藏传统分析内容
         document.getElementById('baziResult').classList.remove('hidden');
         
         // 滚动到结果位置
@@ -676,70 +690,15 @@ FortuneApp.prototype.requestAIAnswer = async function({ type, prompt, targetId }
 
         const apiKey = OPENAI_API_KEY;
 
-        // 优先尝试 /v1/responses 接口（gpt-5 更可能支持）
-        const callResponses = async () => {
-            const payload = {
-                model: 'gpt-5',
-                input: prompt,
-                max_output_tokens: 600
-            };
-            const resp = await fetch('https://api.openai.com/v1/responses', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKey}`
-                },
-                body: JSON.stringify(payload)
-            });
-            if (!resp.ok) {
-                const txt = await resp.text();
-                throw new Error(txt || 'responses 接口失败');
-            }
-            const data = await resp.json();
-            console.log('AI responses raw:', data);
-            let text = '';
-            
-            // 根据控制台看到的实际结构解析
-            if (Array.isArray(data.output) && data.output.length > 0) {
-                const output = data.output[0];
-                if (output && typeof output === 'object') {
-                    // 尝试多种可能的文本字段
-                    if (typeof output.text === 'string') {
-                        text = output.text;
-                    } else if (typeof output.content === 'string') {
-                        text = output.content;
-                    } else if (Array.isArray(output.content) && output.content.length > 0) {
-                        const content = output.content[0];
-                        if (content && typeof content.text === 'string') {
-                            text = content.text;
-                        } else if (content && typeof content === 'string') {
-                            text = content;
-                        }
-                    }
-                }
-            }
-            
-            // 兜底：尝试其他字段
-            if (!text) {
-                if (typeof data.output_text === 'string' && data.output_text.trim()) {
-                    text = data.output_text;
-                } else if (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) {
-                    text = data.choices[0].message.content;
-                }
-            }
-            
-            console.log('AI extracted text:', text);
-            return text;
-        };
-
+        // 直接使用 chat.completions 接口（更稳定）
         const callChatCompletions = async () => {
             const payload = {
-                model: 'gpt-5',
+                model: 'gpt-4o', // 改用稳定的 gpt-4o
                 messages: [
                     { role: 'system', content: '你是一个精通传统文化的小六壬与八字解读助手，请以温和、简洁、尊重的语气提供娱乐性建议，不涉及医疗、法律、金融等严肃结论。' },
                     { role: 'user', content: prompt }
                 ],
-                max_completion_tokens: 600
+                max_tokens: 600
             };
             const resp = await fetch('https://api.openai.com/v1/chat/completions', {
                 method: 'POST',
@@ -758,22 +717,16 @@ FortuneApp.prototype.requestAIAnswer = async function({ type, prompt, targetId }
             let text = '';
             if (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) {
                 text = data.choices[0].message.content;
-            } else if (typeof data.output_text === 'string') {
-                text = data.output_text;
             }
+            console.log('AI extracted text:', text);
             return text;
         };
 
         let answer = '';
         try {
-            answer = await callResponses();
-        } catch (e1) {
-            console.warn('responses 接口失败，回退 chat.completions', e1);
-            try {
-                answer = await callChatCompletions();
-            } catch (e2) {
-                throw e2;
-            }
+            answer = await callChatCompletions();
+        } catch (e) {
+            throw e;
         }
 
         if (target) {
