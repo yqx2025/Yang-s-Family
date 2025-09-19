@@ -669,7 +669,12 @@ FortuneApp.prototype.requestAIAnswer = async function({ type, prompt, targetId }
             target.innerHTML = '<div style="padding:10px;border-left:3px solid #667eea;color:#4a5568;">AI 解读生成中...</div>';
         }
 
-        const resp = await fetch('/.netlify/functions/ai', {
+        // 本地开发使用 Netlify Dev 默认端口 8888；生产用相对路径
+        const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+        const base = isLocal ? (window.NETLIFY_DEV_URL || 'http://localhost:8888') : '';
+        const endpoint = `${base}/.netlify/functions/ai`;
+
+        const resp = await fetch(endpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ prompt, context: { type } })
